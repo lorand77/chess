@@ -4,15 +4,11 @@ import chess.pgn
 import chess.engine
 import random
 
-logging.basicConfig(
-    filename="uci.log",
-    level=logging.DEBUG,
-    filemode="w"
-)
-
-board = chess.Board()
+board = chess.Board("1k6/3r4/8/8/8/6R1/8/4K3 w - - 99 1")
 engine = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
 engine.configure({"Threads": 8, "Hash": 1024})
+
+
 
 move_number = 1
 score = []
