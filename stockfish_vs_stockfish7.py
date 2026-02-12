@@ -10,9 +10,27 @@ import chess.engine
 # )
 
 board = chess.Board()
-engine = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
-engine.configure({"Threads": 8, "Hash": 1024})
-engine.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
+
+engine_white = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
+engine_black = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
+engine_white.configure({"Threads": 10, "Hash": 1024})
+engine_white.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
+engine_black.configure({"Threads": 10, "Hash": 1024})
+engine_black.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
+
+engine_white.configure({
+  #"UCI_LimitStrength": False
+  "UCI_LimitStrength": True,
+  "UCI_Elo": 3000
+})
+# engine_white.configure({"Skill Level": 20})
+
+engine_black.configure({
+  "UCI_LimitStrength": True,
+  "UCI_Elo": 2600
+})
+# engine_black.configure({"Skill Level": 0})
+
 
 def play_games(num_games=100):
     """Play multiple games and record results"""
@@ -23,25 +41,14 @@ def play_games(num_games=100):
         
         # Play the game
         while not board.is_game_over(claim_draw=True):
-            # white (Stockfish) makes a move
-            # engine.configure({
-            #   "UCI_LimitStrength": False
-            # })
-            engine.configure({"Skill Level": 20})
-            engine_result = engine.analyse(board, chess.engine.Limit(time=0.5))
-            best_move = engine_result["pv"][0]
-            board.push(best_move)
+
+            engine_result = engine_white.play(board, chess.engine.Limit(time=0.5))
+            board.push(engine_result.move)
             if board.is_game_over(claim_draw=True):
                 break
-            # black (Stockfish) makes a move
-            # engine.configure({
-            #   "UCI_LimitStrength": True,
-            #   "UCI_Elo": 1320
-            # })
-            engine.configure({"Skill Level": 0})
-            engine_result = engine.analyse(board, chess.engine.Limit(time=0.5))
-            best_move = engine_result["pv"][0]
-            board.push(best_move)
+
+            engine_result = engine_black.play(board, chess.engine.Limit(time=0.5))
+            board.push(engine_result.move)
         
         # Record result
         result = board.result()
@@ -68,4 +75,6 @@ def play_games(num_games=100):
     return results
 
 if __name__ == "__main__":
-    play_games(100)
+    play_games(10)
+    engine_white.quit()
+    engine_black.quit()
