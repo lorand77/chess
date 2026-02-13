@@ -14,14 +14,14 @@ board = chess.Board()
 engine_white = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
 engine_black = chess.engine.SimpleEngine.popen_uci(r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe")
 engine_white.configure({"Threads": 10, "Hash": 1024})
-engine_white.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
+#engine_white.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
 engine_black.configure({"Threads": 10, "Hash": 1024})
-engine_black.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
+#engine_black.configure({"SyzygyPath": r"C:\Users\lorand\Programs\syzygy"})
 
 engine_white.configure({
   #"UCI_LimitStrength": False
   "UCI_LimitStrength": True,
-  "UCI_Elo": 3000
+  "UCI_Elo": 2600
 })
 # engine_white.configure({"Skill Level": 20})
 
