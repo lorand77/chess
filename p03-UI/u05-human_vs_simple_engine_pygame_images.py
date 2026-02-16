@@ -44,7 +44,7 @@ class ChessGUI:
         pygame.display.set_caption("Human vs Simple Engine - Chess (Images)")
         self.clock = pygame.time.Clock()
         self.board = chess.Board()
-        self.engine = SimpleEngine(depth=3)
+        self.engine = SimpleEngine(depth=2)
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
         self.font_small = pygame.freetype.SysFont("Arial", 18)

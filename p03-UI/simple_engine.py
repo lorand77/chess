@@ -74,64 +74,87 @@ class SimpleEngine:
     #  Minimax + Alpha-Beta
     # ==========================
     def minimax(self, board, depth, alpha, beta, maximizing_player):
+        self.nodes_visited += 1
 
         if depth == 0 or board.is_game_over():
-            return self.evaluate(board)
+            eval_score = self.evaluate(board)
+            #print(f"  {'  ' * (self.depth - depth)}Leaf node at depth {depth}: eval = {eval_score}")
+            return eval_score
 
         if maximizing_player:
             max_eval = -math.inf
+            print(f"  {'  ' * (self.depth - depth)}MAX at depth {depth}, exploring {board.legal_moves.count()} moves")
             for move in board.legal_moves:
                 board.push(move)
                 eval = self.minimax(board, depth - 1, alpha, beta, False)
                 board.pop()
+                print(f"  {'  ' * (self.depth - depth)}MAX: move {move} -> eval {eval}")
 
                 max_eval = max(max_eval, eval)
-                alpha = max(alpha, eval)
+                #alpha = max(alpha, eval)
                 #if beta <= alpha:
                 #    break  # Beta cut-off
-
+            
+            print(f"  {'  ' * (self.depth - depth)}MAX returning: {max_eval}")
             return max_eval
 
         else:
             min_eval = math.inf
+            print(f"  {'  ' * (self.depth - depth)}MIN at depth {depth}, exploring {board.legal_moves.count()} moves")
             for move in board.legal_moves:
                 board.push(move)
                 eval = self.minimax(board, depth - 1, alpha, beta, True)
                 board.pop()
+                print(f"  {'  ' * (self.depth - depth)}MIN: move {move} -> eval {eval}")
 
                 min_eval = min(min_eval, eval)
-                beta = min(beta, eval)
+                #beta = min(beta, eval)
                 #if beta <= alpha:
                 #    break  # Alpha cut-off
-
+            
+            print(f"  {'  ' * (self.depth - depth)}MIN returning: {min_eval}")
             return min_eval
 
     # ==========================
     #  Find Best Move
     # ==========================
     def get_best_move(self, board):
+        self.nodes_visited = 0
 
         best_move = None
         best_value = -math.inf if board.turn == chess.WHITE else math.inf
+        
+        player = "WHITE" if board.turn == chess.WHITE else "BLACK"
+        print(f"\n{'='*60}")
+        print(f"Finding best move for {player} at depth {self.depth}")
+        print(f"{'='*60}")
 
         for move in board.legal_moves:
+            print(f"\nEvaluating root move: {move}")
             board.push(move)
             board_value = self.minimax(
                 board,
                 self.depth - 1,
                 -math.inf,
                 math.inf,
-                board.turn == chess.BLACK
+                board.turn == chess.WHITE
             )
             board.pop()
+            print(f"Root move {move} has value: {board_value}")
 
             if board.turn == chess.WHITE:
                 if board_value > best_value:
                     best_value = board_value
                     best_move = move
+                    print(f"  -> New best move for WHITE: {best_move} (value: {best_value})")
             else:
                 if board_value < best_value:
                     best_value = board_value
                     best_move = move
+                    print(f"  -> New best move for BLACK: {best_move} (value: {best_value})")
 
+        print(f"\n{'='*60}")
+        print(f"FINAL BEST MOVE: {best_move} with value {best_value}")
+        print(f"Total nodes visited: {self.nodes_visited}")
+        print(f"{'='*60}\n")
         return best_move
