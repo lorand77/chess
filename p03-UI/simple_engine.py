@@ -61,7 +61,7 @@ class SimpleEngine:
                 if piece.color == chess.WHITE:
                     value += self.pawn_table[square]
                 else:
-                    value -= self.pawn_table[chess.square_mirror(square)]
+                    value += self.pawn_table[chess.square_mirror(square)]
 
             if piece.color == chess.WHITE:
                 score += value
@@ -87,8 +87,8 @@ class SimpleEngine:
 
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, eval)
-                if beta <= alpha:
-                    break  # Beta cut-off
+                #if beta <= alpha:
+                #    break  # Beta cut-off
 
             return max_eval
 
@@ -101,8 +101,8 @@ class SimpleEngine:
 
                 min_eval = min(min_eval, eval)
                 beta = min(beta, eval)
-                if beta <= alpha:
-                    break  # Alpha cut-off
+                #if beta <= alpha:
+                #    break  # Alpha cut-off
 
             return min_eval
 
