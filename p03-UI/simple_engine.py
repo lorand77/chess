@@ -1,8 +1,9 @@
 import chess
 import math
+import time
 
 class SimpleEngine:
-    def __init__(self, depth=3):
+    def __init__(self, depth):
         self.depth = depth
 
         # Basic piece values (centipawns)
@@ -16,6 +17,7 @@ class SimpleEngine:
         }
 
         # Piece-square tables (white perspective)
+        # from https://github.com/thomasahle/sunfish
         self.pawn_table = (
              0,   0,   0,   0,   0,   0,   0,   0,
            -31,   8,  -7, -37, -36, -14,   3, -31,
@@ -133,6 +135,8 @@ class SimpleEngine:
     #  Minimax + Alpha-Beta
     # ==========================
     def minimax(self, board, depth, alpha, beta, maximizing_player):
+        self.nodes_visited += 1
+
         if depth == 0 or board.is_game_over():
             eval_score = self.evaluate(board, depth)
             return eval_score
@@ -141,11 +145,11 @@ class SimpleEngine:
             max_eval = -math.inf
             for move in board.legal_moves:
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, False)
+                move_eval = self.minimax(board, depth - 1, alpha, beta, False)
                 board.pop()
 
-                max_eval = max(max_eval, eval)
-                alpha = max(alpha, eval)
+                max_eval = max(max_eval, move_eval)
+                alpha = max(alpha, move_eval)
                 if beta <= alpha:
                     break  # Beta cut-off
             
@@ -155,11 +159,11 @@ class SimpleEngine:
             min_eval = math.inf
             for move in board.legal_moves:
                 board.push(move)
-                eval = self.minimax(board, depth - 1, alpha, beta, True)
+                move_eval = self.minimax(board, depth - 1, alpha, beta, True)
                 board.pop()
 
-                min_eval = min(min_eval, eval)
-                beta = min(beta, eval)
+                min_eval = min(min_eval, move_eval)
+                beta = min(beta, move_eval)
                 if beta <= alpha:
                     break  # Alpha cut-off
             
@@ -169,27 +173,47 @@ class SimpleEngine:
     #  Find Best Move
     # ==========================
     def get_best_move(self, board):
+        start_time = time.time()
+        self.nodes_visited = 0
         best_move = None
-        best_value = -math.inf if board.turn == chess.WHITE else math.inf
+        alpha = -math.inf
+        beta = math.inf
 
-        for move in board.legal_moves:
-            board.push(move)
-            board_value = self.minimax(
-                board,
-                self.depth - 1,
-                -math.inf,
-                math.inf,
-                board.turn == chess.WHITE
-            )
-            board.pop()
+        if board.turn == chess.WHITE:
+            best_value = -math.inf
+            for move in board.legal_moves:
+                board.push(move)
+                board_value = self.minimax(
+                    board,
+                    self.depth - 1,
+                    alpha,
+                    beta,
+                    False
+                )
+                board.pop()
 
-            if board.turn == chess.WHITE:
                 if board_value > best_value:
                     best_value = board_value
                     best_move = move
-            else:
+                alpha = max(alpha, best_value)
+        else:
+            best_value = math.inf
+            for move in board.legal_moves:
+                board.push(move)
+                board_value = self.minimax(
+                    board,
+                    self.depth - 1,
+                    alpha,
+                    beta,
+                    True
+                )
+                board.pop()
+
                 if board_value < best_value:
                     best_value = board_value
                     best_move = move
+                beta = min(beta, best_value)
 
+        elapsed_time = time.time() - start_time
+        print(f"Nodes visited: {self.nodes_visited}, Time: {elapsed_time:.3f}s")
         return best_move

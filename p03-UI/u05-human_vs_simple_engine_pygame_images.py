@@ -47,7 +47,7 @@ class ChessGUI:
         #self.board = chess.Board("7k/7p/6Pp/8/8/7P/7P/7K b - - 0 1")
         #self.board = chess.Board("rnb1k3/ppp5/8/3N4/7b/2p5/6P1/6RK b - - 0 8")
         #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
-        self.engine = SimpleEngine(depth=3)  
+        self.engine = SimpleEngine(depth=4)  
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
         self.font_small = pygame.freetype.SysFont("Arial", 18)
@@ -298,6 +298,32 @@ class ChessGUI:
 
         self.thinking = False
 
+    def undo_move(self):
+        """Undo the last two moves (engine and human)"""
+        if self.game_over:
+            return
+        
+        if self.board.turn == chess.WHITE:
+            # It's white's turn, so we need to undo black's last move and white's previous move
+            if len(self.board.move_stack) >= 2:
+                self.board.pop()  # Undo black's move
+                self.board.pop()  # Undo white's move
+                # Remove last 2 entries from move history
+                if len(self.move_history) >= 2:
+                    self.move_history = self.move_history[:-2]
+                self.last_move = self.board.peek() if self.board.move_stack else None
+                self.selected_square = None
+                self.legal_moves = []
+        else:
+            # It's black's turn (shouldn't happen in normal play, but handle it)
+            if len(self.board.move_stack) >= 1:
+                self.board.pop()  # Undo white's move
+                if len(self.move_history) >= 1:
+                    self.move_history = self.move_history[:-1]
+                self.last_move = self.board.peek() if self.board.move_stack else None
+                self.selected_square = None
+                self.legal_moves = []
+
     def run(self):
         """Main game loop"""
         running = True
@@ -311,6 +337,9 @@ class ChessGUI:
                         square = self.square_from_mouse(event.pos)
                         if square is not None:
                             self.handle_square_click(square)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:  # R key for undo
+                        self.undo_move()
 
             # Make engine move if it's black's turn
             if not self.game_over and self.board.turn == chess.BLACK and not self.thinking:
