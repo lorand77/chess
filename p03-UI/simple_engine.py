@@ -91,9 +91,9 @@ class SimpleEngine:
                 print(f"  {'  ' * (self.depth - depth)}MAX: move {move} -> eval {eval}")
 
                 max_eval = max(max_eval, eval)
-                #alpha = max(alpha, eval)
-                #if beta <= alpha:
-                #    break  # Beta cut-off
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break  # Beta cut-off
             
             print(f"  {'  ' * (self.depth - depth)}MAX returning: {max_eval}")
             return max_eval
@@ -108,9 +108,9 @@ class SimpleEngine:
                 print(f"  {'  ' * (self.depth - depth)}MIN: move {move} -> eval {eval}")
 
                 min_eval = min(min_eval, eval)
-                #beta = min(beta, eval)
-                #if beta <= alpha:
-                #    break  # Alpha cut-off
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break  # Alpha cut-off
             
             print(f"  {'  ' * (self.depth - depth)}MIN returning: {min_eval}")
             return min_eval
