@@ -43,10 +43,10 @@ class ChessGUI:
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption("Human vs Simple Engine - Chess (Images)")
         self.clock = pygame.time.Clock()
-        #self.board = chess.Board()
+        self.board = chess.Board()
         #self.board = chess.Board("7k/7p/6Pp/8/8/7P/7P/7K b - - 0 1")
         #self.board = chess.Board("rnb1k3/ppp5/8/3N4/7b/2p5/6P1/6RK b - - 0 8")
-        self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
+        #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
         self.engine = SimpleEngine(depth=3)  
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
