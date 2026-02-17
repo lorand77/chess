@@ -30,7 +30,7 @@ class SimpleEngine:
     # ==========================
     #  Evaluation Function
     # ==========================
-    def evaluate(self, board):
+    def evaluate(self, board, depth=0):
         """
         Evaluate position from White's perspective.
         Positive score = good for White
@@ -39,9 +39,9 @@ class SimpleEngine:
 
         if board.is_checkmate():
             if board.turn:
-                return -99999  # White to move and checkmated
+                return -99999 - depth  # White to move and checkmated (prefer slower mate)
             else:
-                return 99999   # Black to move and checkmated
+                return 99999 + depth   # Black to move and checkmated (prefer faster mate)
 
         if board.is_stalemate() or board.is_insufficient_material():
             return 0
@@ -74,10 +74,8 @@ class SimpleEngine:
     #  Minimax + Alpha-Beta
     # ==========================
     def minimax(self, board, depth, alpha, beta, maximizing_player):
-        self.nodes_visited += 1
-
         if depth == 0 or board.is_game_over():
-            eval_score = self.evaluate(board)
+            eval_score = self.evaluate(board, depth)
             return eval_score
 
         if maximizing_player:
@@ -112,8 +110,6 @@ class SimpleEngine:
     #  Find Best Move
     # ==========================
     def get_best_move(self, board):
-        self.nodes_visited = 0
-
         best_move = None
         best_value = -math.inf if board.turn == chess.WHITE else math.inf
 
