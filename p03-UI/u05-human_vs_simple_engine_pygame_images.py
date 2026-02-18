@@ -50,7 +50,7 @@ class ChessGUI:
         #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
         #self.board = chess.Board("r1b1k1nr/pp3ppp/1q2p3/3pP3/1b1N4/N7/PP1B1PPP/R2QKB1R b KQkq - 0 9")
         #self.board = chess.Board("7k/2PP4/8/8/8/8/8/2K5 w - - 0 1")
-        self.engine = SimpleEngine(depth=4)  
+        self.engine = SimpleEngine(depth=5)  
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
         self.font_small = pygame.freetype.SysFont("Arial", 18)

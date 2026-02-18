@@ -256,5 +256,5 @@ class SimpleEngine:
                 beta = min(beta, best_value)
 
         elapsed_time = time.time() - start_time
-        print(f"Nodes visited: {self.nodes_visited}, Time: {elapsed_time:.3f}s")
+        # print(f"Nodes visited: {self.nodes_visited}, Time: {elapsed_time:.3f}s")
         return best_move
