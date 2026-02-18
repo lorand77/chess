@@ -47,6 +47,8 @@ class ChessGUI:
         #self.board = chess.Board("7k/7p/6Pp/8/8/7P/7P/7K b - - 0 1")
         #self.board = chess.Board("rnb1k3/ppp5/8/3N4/7b/2p5/6P1/6RK b - - 0 8")
         #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
+        #self.board = chess.Board("r1b1k1nr/pp3ppp/1q2p3/3pP3/1b1N4/N7/PP1B1PPP/R2QKB1R b KQkq - 0 9")
+        #self.board = chess.Board("7k/2PP4/8/8/8/8/8/2K5 w - - 0 1")
         self.engine = SimpleEngine(depth=4)  
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
@@ -60,6 +62,8 @@ class ChessGUI:
         self.game_over = False
         self.move_history = []
         self.thinking = False
+        self.promotion_pending = None  # (from_square, to_square) when waiting for promotion choice
+        self.engine_should_move = False  # Flag to trigger engine move on next frame
 
     def load_piece_images(self):
         images = {}
@@ -162,6 +166,50 @@ class ChessGUI:
                     color = (255, 255, 255) if piece.color == chess.WHITE else (0, 0, 0)
                     pygame.draw.circle(self.screen, color, center, 25)
 
+    def draw_promotion_dialog(self):
+        """Draw promotion piece selection dialog"""
+        if self.promotion_pending is None:
+            return
+        
+        # Semi-transparent overlay
+        overlay = pygame.Surface((BOARD_SIZE, BOARD_SIZE))
+        overlay.set_alpha(128)
+        overlay.fill((0, 0, 0))
+        self.screen.blit(overlay, (0, 0))
+        
+        # Dialog box
+        dialog_width = 320
+        dialog_height = 120
+        dialog_x = (BOARD_SIZE - dialog_width) // 2
+        dialog_y = (BOARD_SIZE - dialog_height) // 2
+        
+        pygame.draw.rect(self.screen, (60, 60, 60), (dialog_x, dialog_y, dialog_width, dialog_height))
+        pygame.draw.rect(self.screen, (200, 200, 200), (dialog_x, dialog_y, dialog_width, dialog_height), 3)
+        
+        # Title
+        title, _ = self.font_text.render("Choose Promotion:", TEXT_COLOR)
+        self.screen.blit(title, (dialog_x + 20, dialog_y + 15))
+        
+        # Piece options
+        pieces = [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]
+        piece_y = dialog_y + 55
+        piece_spacing = 70
+        start_x = dialog_x + 20
+        
+        for i, piece_type in enumerate(pieces):
+            piece_x = start_x + i * piece_spacing
+            color = chess.WHITE  # Human is always white
+            
+            # Draw piece image
+            image = self.piece_images.get((color, piece_type))
+            if image:
+                # Scale down for dialog
+                small_image = pygame.transform.smoothscale(image, (50, 50))
+                self.screen.blit(small_image, (piece_x + 5, piece_y))
+            
+            # Draw selection box
+            pygame.draw.rect(self.screen, (150, 150, 150), (piece_x, piece_y, 60, 60), 2)
+
     def draw_info_panel(self):
         """Draw the information panel"""
         panel_x = BOARD_SIZE
@@ -226,6 +274,58 @@ class ChessGUI:
         for i, move_str in enumerate(self.move_history[start_idx:]):
             move_text, _ = self.font_small.render(move_str, (200, 200, 200))
             self.screen.blit(move_text, (panel_x + 30, y_offset + i * 25))
+        
+        # Controls hint
+        y_offset += 300
+        hint_text, _ = self.font_small.render("Press R to undo", (150, 150, 150))
+        self.screen.blit(hint_text, (panel_x + 20, y_offset))
+
+    def handle_promotion_click(self, pos):
+        """Handle click on promotion dialog"""
+        if self.promotion_pending is None:
+            return False
+        
+        dialog_width = 320
+        dialog_height = 120
+        dialog_x = (BOARD_SIZE - dialog_width) // 2
+        dialog_y = (BOARD_SIZE - dialog_height) // 2
+        
+        piece_y = dialog_y + 55
+        piece_spacing = 70
+        start_x = dialog_x + 20
+        
+        pieces = [chess.QUEEN, chess.ROOK, chess.BISHOP, chess.KNIGHT]
+        
+        for i, piece_type in enumerate(pieces):
+            piece_x = start_x + i * piece_spacing
+            rect = pygame.Rect(piece_x, piece_y, 60, 60)
+            
+            if rect.collidepoint(pos):
+                # Make the promotion move
+                from_square, to_square = self.promotion_pending
+                move = chess.Move(from_square, to_square, promotion=piece_type)
+                
+                san = self.board.san(move)
+                move_num = self.board.fullmove_number
+                self.board.push(move)
+                self.last_move = move
+                
+                # Format move history (white just moved)
+                self.move_history.append(f"{move_num}. {san}")
+                
+                # Check if game is over
+                if self.board.is_game_over():
+                    self.game_over = True
+                else:
+                    # Trigger engine move on next frame
+                    self.engine_should_move = True
+                
+                self.promotion_pending = None
+                self.selected_square = None
+                self.legal_moves = []
+                return True
+        
+        return False
 
     def handle_square_click(self, square):
         """Handle a square being clicked"""
@@ -247,23 +347,36 @@ class ChessGUI:
                     break
 
             if move:
-                # Handle pawn promotion
-                if move.promotion is None and self.board.piece_at(self.selected_square).piece_type == chess.PAWN:
-                    if chess.square_rank(square) in [0, 7]:
-                        move = chess.Move(self.selected_square, square, promotion=chess.QUEEN)
-
+                # Check if this is a pawn promotion
+                piece = self.board.piece_at(self.selected_square)
+                if piece and piece.piece_type == chess.PAWN and chess.square_rank(square) in [0, 7]:
+                    # Show promotion dialog
+                    self.promotion_pending = (self.selected_square, square)
+                    return
+                
                 # Make the move
                 san = self.board.san(move)
+                move_num = self.board.fullmove_number
                 self.board.push(move)
                 self.last_move = move
-                move_num = self.board.fullmove_number - 1
-                self.move_history.append(f"{move_num}. {san}")
+                
+                # Format move history
+                if self.last_move and self.board.turn == chess.BLACK:
+                    # White just moved
+                    self.move_history.append(f"{move_num}. {san}")
+                else:
+                    # Black just moved
+                    self.move_history.append(f"{move_num}... {san}")
+                
                 self.selected_square = None
                 self.legal_moves = []
 
                 # Check if game is over
                 if self.board.is_game_over():
                     self.game_over = True
+                else:
+                    # Trigger engine move on next frame after UI updates
+                    self.engine_should_move = True
             else:
                 # Deselect or select a different piece
                 piece = self.board.piece_at(square)
@@ -287,9 +400,9 @@ class ChessGUI:
 
         if engine_move:
             san = self.board.san(engine_move)
+            move_num = self.board.fullmove_number
             self.board.push(engine_move)
             self.last_move = engine_move
-            move_num = self.board.fullmove_number - 1
             self.move_history.append(f"{move_num}... {san}")
 
             # Check if game is over
@@ -302,6 +415,9 @@ class ChessGUI:
         """Undo the last two moves (engine and human)"""
         if self.game_over:
             return
+        
+        # Clear promotion dialog if showing
+        self.promotion_pending = None
         
         if self.board.turn == chess.WHITE:
             # It's white's turn, so we need to undo black's last move and white's previous move
@@ -334,6 +450,10 @@ class ChessGUI:
                     running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:  # Left click
+                        # Check if clicking on promotion dialog
+                        if self.promotion_pending and self.handle_promotion_click(event.pos):
+                            continue
+                        
                         square = self.square_from_mouse(event.pos)
                         if square is not None:
                             self.handle_square_click(square)
@@ -341,18 +461,21 @@ class ChessGUI:
                     if event.key == pygame.K_r:  # R key for undo
                         self.undo_move()
 
-            # Make engine move if it's black's turn
-            if not self.game_over and self.board.turn == chess.BLACK and not self.thinking:
-                self.make_engine_move()
-
-            # Draw everything
+            # Draw everything first
             self.screen.fill(BACKGROUND)
             self.draw_board()
             self.draw_legal_move_hints()
             self.draw_pieces()
             self.draw_info_panel()
+            self.draw_promotion_dialog()
 
             pygame.display.flip()
+            
+            # Make engine move AFTER drawing white's move
+            if self.engine_should_move and not self.game_over and not self.thinking and not self.promotion_pending:
+                self.engine_should_move = False
+                self.make_engine_move()
+            
             self.clock.tick(FPS)
 
         # Save game to PGN

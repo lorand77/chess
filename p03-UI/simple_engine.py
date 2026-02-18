@@ -7,12 +7,13 @@ class SimpleEngine:
         self.depth = depth
 
         # Basic piece values (centipawns)
+        # from https://github.com/thomasahle/sunfish
         self.piece_values = {
             chess.PAWN: 100,
-            chess.KNIGHT: 320,
-            chess.BISHOP: 330,
-            chess.ROOK: 500,
-            chess.QUEEN: 900,
+            chess.KNIGHT: 280,
+            chess.BISHOP: 320,
+            chess.ROOK: 479,
+            chess.QUEEN: 929,
             chess.KING: 0  # King value handled separately
         }
 
@@ -89,6 +90,40 @@ class SimpleEngine:
         }
 
     # ==========================
+    #  Move Ordering
+    # ==========================
+    def order_moves(self, board, moves):
+        """
+        Order moves to improve alpha-beta pruning.
+        Prioritize: captures (MVV-LVA), checks, then other moves.
+        """
+        def move_score(move):
+            score = 0
+            
+            # Prioritize captures (MVV-LVA: Most Valuable Victim - Least Valuable Attacker)
+            if board.is_capture(move):
+                victim = board.piece_at(move.to_square)
+                attacker = board.piece_at(move.from_square)
+                if victim and attacker:
+                    # Higher score for capturing valuable pieces with less valuable pieces
+                    score += self.piece_values.get(victim.piece_type, 0) * 10
+                    score -= self.piece_values.get(attacker.piece_type, 0) // 100
+            
+            # Prioritize checks
+            board.push(move)
+            if board.is_check():
+                score += 5000
+            board.pop()
+            
+            # Prioritize pawn promotions
+            if move.promotion:
+                score += 8000
+            
+            return score
+        
+        return sorted(moves, key=move_score, reverse=True)
+
+    # ==========================
     #  Evaluation Function
     # ==========================
     def evaluate(self, board, depth=0):
@@ -141,9 +176,12 @@ class SimpleEngine:
             eval_score = self.evaluate(board, depth)
             return eval_score
 
+        # Order moves for better pruning
+        moves = self.order_moves(board, list(board.legal_moves))
+
         if maximizing_player:
             max_eval = -math.inf
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
                 move_eval = self.minimax(board, depth - 1, alpha, beta, False)
                 board.pop()
@@ -157,7 +195,7 @@ class SimpleEngine:
 
         else:
             min_eval = math.inf
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
                 move_eval = self.minimax(board, depth - 1, alpha, beta, True)
                 board.pop()
@@ -179,9 +217,12 @@ class SimpleEngine:
         alpha = -math.inf
         beta = math.inf
 
+        # Order moves for better pruning
+        moves = self.order_moves(board, list(board.legal_moves))
+
         if board.turn == chess.WHITE:
             best_value = -math.inf
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
                 board_value = self.minimax(
                     board,
@@ -198,7 +239,7 @@ class SimpleEngine:
                 alpha = max(alpha, best_value)
         else:
             best_value = math.inf
-            for move in board.legal_moves:
+            for move in moves:
                 board.push(move)
                 board_value = self.minimax(
                     board,
