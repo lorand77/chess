@@ -24,6 +24,7 @@ WHITE = (240, 217, 181)
 BLACK = (181, 136, 99)
 HIGHLIGHT = (186, 202, 68)
 SELECTED = (246, 246, 130)
+CHECK_COLOR = (235, 97, 80)  # Red background for king in check
 BACKGROUND = (50, 50, 50)
 TEXT_COLOR = (255, 255, 255)
 
@@ -118,8 +119,20 @@ class ChessGUI:
                 # Highlight selected square
                 if self.selected_square == square:
                     color = SELECTED
+                
+                # Highlight king in check with red background
+                piece = self.board.piece_at(square)
+                if self.board.is_check() and piece and piece.piece_type == chess.KING and piece.color == self.board.turn:
+                    color = CHECK_COLOR
 
                 pygame.draw.rect(self.screen, color, (x, y, SQUARE_SIZE, SQUARE_SIZE))
+                
+                # Draw red pulsing border around king in check
+                if self.board.is_check() and piece and piece.piece_type == chess.KING and piece.color == self.board.turn:
+                    # Thick red border
+                    pygame.draw.rect(self.screen, (220, 50, 50), (x, y, SQUARE_SIZE, SQUARE_SIZE), 5)
+                    # Inner lighter border for glow effect
+                    pygame.draw.rect(self.screen, (255, 150, 150), (x + 5, y + 5, SQUARE_SIZE - 10, SQUARE_SIZE - 10), 2)
 
         # Draw coordinates
         for i in range(8):
