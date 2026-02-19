@@ -97,9 +97,9 @@ class SimpleEngine:
         return sorted(moves, key=move_score, reverse=True)
 
     def evaluate(self, board, depth=0):
-        """Evaluate position from White's perspective"""
+        """Evaluate position from the current player's perspective"""
         if board.is_checkmate():
-            return (-99999 - depth) if board.turn else (99999 + depth)
+            return -99999 - depth  # current player is checkmated
         if board.is_stalemate() or board.is_insufficient_material():
             return 0
 
@@ -111,9 +111,10 @@ class SimpleEngine:
             sq = square if piece.color == chess.WHITE else chess.square_mirror(square)
             value = self.piece_values[piece.piece_type] + self.pst[piece.piece_type][sq]
             score += value if piece.color == chess.WHITE else -value
-        return score
 
-    def minimax(self, board, depth, alpha, beta, maximizing_player):
+        return score if board.turn == chess.WHITE else -score
+
+    def negamax(self, board, depth, alpha, beta):
         self.nodes_visited += 1
 
         if depth == 0 or board.is_game_over():
@@ -121,49 +122,33 @@ class SimpleEngine:
 
         moves = self.order_moves(board, list(board.legal_moves))
 
-        if maximizing_player:
-            best = -math.inf
-            for move in moves:
-                board.push(move)
-                best = max(best, self.minimax(board, depth - 1, alpha, beta, False))
-                board.pop()
-                alpha = max(alpha, best)
-                if beta <= alpha:
-                    break
-            return best
-        else:
-            best = math.inf
-            for move in moves:
-                board.push(move)
-                best = min(best, self.minimax(board, depth - 1, alpha, beta, True))
-                board.pop()
-                beta = min(beta, best)
-                if beta <= alpha:
-                    break
-            return best
+        best = -math.inf
+        for move in moves:
+            board.push(move)
+            best = max(best, -self.negamax(board, depth - 1, -beta, -alpha))
+            board.pop()
+            alpha = max(alpha, best)
+            if alpha >= beta:
+                break
+        return best
 
     def get_best_move(self, board):
         self.nodes_visited = 0
         start_time = time.time()
         best_move = None
+        best_value = -math.inf
         alpha = -math.inf
         beta = math.inf
-        is_maximizing = board.turn == chess.WHITE
-        best_value = -math.inf if is_maximizing else math.inf
 
         for move in self.order_moves(board, list(board.legal_moves)):
             board.push(move)
-            value = self.minimax(board, self.depth - 1, alpha, beta, not is_maximizing)
+            value = -self.negamax(board, self.depth - 1, -beta, -alpha)
             board.pop()
 
-            if is_maximizing and value > best_value:
+            if value > best_value:
                 best_value = value
                 best_move = move
-                alpha = max(alpha, best_value)
-            elif not is_maximizing and value < best_value:
-                best_value = value
-                best_move = move
-                beta = min(beta, best_value)
+            alpha = max(alpha, value)
 
         elapsed = time.time() - start_time
         print(f"  nodes={self.nodes_visited}  time={elapsed:.3f}s")
