@@ -88,10 +88,8 @@ class SimpleEngine:
                     score -= self.piece_values.get(attacker.piece_type, 0) // 100
             if move.promotion:
                 score += 8000
-            board.push(move)
-            if board.is_check():
+            if board.gives_check(move):
                 score += 5000
-            board.pop()
             return score
 
         return sorted(moves, key=move_score, reverse=True)
@@ -114,11 +112,37 @@ class SimpleEngine:
 
         return score if board.turn == chess.WHITE else -score
 
+    def quiescence(self, board, alpha, beta):
+        self.nodes_visited += 1
+
+        if board.is_game_over():
+            return self.evaluate(board)
+
+        stand_pat = self.evaluate(board)
+        if stand_pat >= beta:
+            return beta
+        if stand_pat > alpha:
+            alpha = stand_pat
+
+        captures = self.order_moves(board, [m for m in board.legal_moves if board.is_capture(m)])
+        for move in captures:
+            board.push(move)
+            score = -self.quiescence(board, -beta, -alpha)
+            board.pop()
+            if score >= beta:
+                return beta
+            if score > alpha:
+                alpha = score
+
+        return alpha
+
     def negamax(self, board, depth, alpha, beta):
         self.nodes_visited += 1
 
-        if depth == 0 or board.is_game_over():
+        if board.is_game_over():
             return self.evaluate(board, depth)
+        if depth == 0:
+            return self.quiescence(board, alpha, beta)
 
         moves = self.order_moves(board, list(board.legal_moves))
 
