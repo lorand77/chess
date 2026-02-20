@@ -4,8 +4,8 @@ import sys
 import os
 
 # Configuration Constants
-DEFAULT_SIMPLE_ENGINE_DEPTH = 6
-DEFAULT_STOCKFISH_ELO = 1320
+DEFAULT_SIMPLE_ENGINE_DEPTH = 4
+DEFAULT_STOCKFISH_ELO = 1580
 DEFAULT_NUM_GAMES = 10
 
 # Add parent directory to path to import simple_engine
@@ -84,12 +84,12 @@ def play_match(simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH, stockfish_elo=DEFAULT_S
         else:
             draws += 1
         
-        print(f"Game {game_num}: {result}")
+        score = simple_wins + draws * 0.5
+        print(f"Game {game_num}: {result}  |  SimpleEngine: {simple_wins}W {draws}D {stockfish_wins}L  Score: {score}/{game_num}")
     
     stockfish.quit()
     
     # Print summary
-    score = simple_wins + draws * 0.5
     print(f"\nSimpleEngine: {simple_wins}W {draws}D {stockfish_wins}L (Score: {score}/{num_games})")
     print(f"Win rate: {simple_wins/num_games*100:.1f}%\n")
 
