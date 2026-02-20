@@ -4,6 +4,7 @@ import sys
 import os
 
 # Configuration Constants
+STOCKFISH_PATH = r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe"
 DEFAULT_SIMPLE_ENGINE_DEPTH = 4
 DEFAULT_STOCKFISH_ELO = 1600
 DEFAULT_NUM_GAMES = 10
@@ -51,8 +52,7 @@ def play_match(simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH, stockfish_elo=DEFAULT_S
     simple_engine = SimpleEngine(depth=simple_depth)
     
     # Initialize Stockfish
-    stockfish_path = r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe"
-    stockfish = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+    stockfish = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
     
     stockfish.configure({
         "UCI_LimitStrength": True,
