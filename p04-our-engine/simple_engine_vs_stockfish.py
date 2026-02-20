@@ -5,7 +5,7 @@ import os
 
 # Configuration Constants
 DEFAULT_SIMPLE_ENGINE_DEPTH = 4
-DEFAULT_STOCKFISH_ELO = 1580
+DEFAULT_STOCKFISH_ELO = 1600
 DEFAULT_NUM_GAMES = 10
 
 # Add parent directory to path to import simple_engine
