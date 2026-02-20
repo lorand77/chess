@@ -18,6 +18,7 @@ INFO_WIDTH = 300
 WINDOW_WIDTH = BOARD_SIZE + INFO_WIDTH
 WINDOW_HEIGHT = BOARD_SIZE
 FPS = 60
+ENGINE_DEPTH = 4
 
 # Colors
 WHITE = (240, 217, 181)
@@ -50,7 +51,7 @@ class ChessGUI:
         #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
         #self.board = chess.Board("r1b1k1nr/pp3ppp/1q2p3/3pP3/1b1N4/N7/PP1B1PPP/R2QKB1R b KQkq - 0 9")
         #self.board = chess.Board("7k/2PP4/8/8/8/8/8/2K5 w - - 0 1")
-        self.engine = SimpleEngine(depth=2)  
+        self.engine = SimpleEngine(depth=ENGINE_DEPTH)
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
         self.font_small = pygame.freetype.SysFont("Arial", 18)
@@ -142,7 +143,7 @@ class ChessGUI:
             self.screen.blit(label, (i * SQUARE_SIZE + 5, BOARD_SIZE - 20))
 
             # Ranks (1-8)
-            color = BLACK if i % 2 == 0 else WHITE
+            color = WHITE if i % 2 == 0 else BLACK
             label, _ = self.font_small.render(str(i + 1), color)
             self.screen.blit(label, (5, (7 - i) * SQUARE_SIZE + 5))
 
@@ -426,11 +427,12 @@ class ChessGUI:
 
     def undo_move(self):
         """Undo the last two moves (engine and human)"""
-        if self.game_over:
-            return
-        
-        # Clear promotion dialog if showing
+        # Clear promotion dialog and pending engine move regardless
         self.promotion_pending = None
+        self.engine_should_move = False
+
+        if self.game_over:
+            self.game_over = False
         
         if self.board.turn == chess.WHITE:
             # It's white's turn, so we need to undo black's last move and white's previous move

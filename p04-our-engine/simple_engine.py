@@ -112,8 +112,10 @@ class SimpleEngine:
 
         return score if board.turn == chess.WHITE else -score
 
-    def quiescence(self, board, alpha, beta):
+    def quiescence(self, board, alpha, beta, qdepth=0):
         self.nodes_visited += 1
+        if qdepth > self.max_quiescence_depth:
+            self.max_quiescence_depth = qdepth
 
         if board.is_game_over():
             return self.evaluate(board)
@@ -127,7 +129,7 @@ class SimpleEngine:
         captures = self.order_moves(board, [m for m in board.legal_moves if board.is_capture(m)])
         for move in captures:
             board.push(move)
-            score = -self.quiescence(board, -beta, -alpha)
+            score = -self.quiescence(board, -beta, -alpha, qdepth + 1)
             board.pop()
             if score >= beta:
                 return beta
@@ -158,6 +160,7 @@ class SimpleEngine:
 
     def get_best_move(self, board):
         self.nodes_visited = 0
+        self.max_quiescence_depth = 0
         start_time = time.time()
         best_move = None
         best_value = -math.inf
@@ -175,5 +178,5 @@ class SimpleEngine:
             alpha = max(alpha, value)
 
         elapsed = time.time() - start_time
-        print(f"  nodes={self.nodes_visited}  time={elapsed:.3f}s")
+        print(f"  nodes={self.nodes_visited}  time={elapsed:.3f}s  max_qdepth={self.max_quiescence_depth}")
         return best_move
