@@ -7,6 +7,7 @@ import os
 DEFAULT_SIMPLE_ENGINE_DEPTH = 4
 DEFAULT_STOCKFISH_ELO = 1600
 DEFAULT_NUM_GAMES = 10
+STOCKFISH_TIME_LIMIT = 0.5  # seconds per move
 
 # Add parent directory to path to import simple_engine
 sys.path.insert(0, os.path.dirname(__file__))
@@ -22,7 +23,7 @@ def play_game(simple_engine, stockfish_engine, simple_plays_white=True):
         if simple_plays_white:
             move = simple_engine.get_best_move(board)
         else:
-            result = stockfish_engine.play(board, chess.engine.Limit(time=0.5))
+            result = stockfish_engine.play(board, chess.engine.Limit(time=STOCKFISH_TIME_LIMIT))
             move = result.move
         
         board.push(move)
@@ -34,7 +35,7 @@ def play_game(simple_engine, stockfish_engine, simple_plays_white=True):
         if not simple_plays_white:
             move = simple_engine.get_best_move(board)
         else:
-            result = stockfish_engine.play(board, chess.engine.Limit(time=0.5))
+            result = stockfish_engine.play(board, chess.engine.Limit(time=STOCKFISH_TIME_LIMIT))
             move = result.move
         
         board.push(move)
