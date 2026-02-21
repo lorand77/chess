@@ -3,7 +3,7 @@ import math
 import time
 
 ## Depth  Elo 
-## 2      ?
+## 2      ~1400     LorFish vs Stockfish 1400: 47W 17D 36L (Score: 55.5/100)
 ## 4      ~1800     LorFish vs Stockfish 1800: 43W 17D 40L  Score: 51.5/100
 
 class LorFish:
