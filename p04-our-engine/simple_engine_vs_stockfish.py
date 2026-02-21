@@ -5,10 +5,12 @@ import os
 
 # Configuration Constants
 STOCKFISH_PATH = r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe"
+#STOCKFISH_PATH = "/usr/local/bin/stockfish"
 DEFAULT_SIMPLE_ENGINE_DEPTH = 4
 DEFAULT_STOCKFISH_ELO = 1600
 DEFAULT_NUM_GAMES = 10
 STOCKFISH_TIME_LIMIT = 0.5  # seconds per move
+STOCKFISH_THREADS = 4
 
 # Add parent directory to path to import simple_engine
 sys.path.insert(0, os.path.dirname(__file__))
@@ -57,7 +59,7 @@ def play_match(simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH, stockfish_elo=DEFAULT_S
     stockfish.configure({
         "UCI_LimitStrength": True,
         "UCI_Elo": stockfish_elo,
-        "Threads": 4,
+        "Threads": STOCKFISH_THREADS,
         "Hash": 512
     })
     
