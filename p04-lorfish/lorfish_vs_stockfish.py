@@ -94,7 +94,6 @@ def play_match(lorfish_depth=DEFAULT_LORFISH_DEPTH, stockfish_elo=DEFAULT_STOCKF
     
     # Print summary
     print(f"\nLorFish: {lorfish_wins}W {draws}D {stockfish_wins}L (Score: {score}/{num_games})")
-    print(f"Win rate: {lorfish_wins/num_games*100:.1f}%\n")
 
 
 if __name__ == "__main__":

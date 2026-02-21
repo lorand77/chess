@@ -2,6 +2,10 @@ import chess
 import math
 import time
 
+## Depth  Elo 
+## 2      ?
+## 4      ~1800     LorFish vs Stockfish 1800: 43W 17D 40L  Score: 51.5/100
+
 class LorFish:
     def __init__(self, depth):
         self.depth = depth
