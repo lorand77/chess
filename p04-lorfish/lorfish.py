@@ -2,7 +2,7 @@ import chess
 import math
 import time
 
-class SimpleEngine:
+class LorFish:
     def __init__(self, depth):
         self.depth = depth
 

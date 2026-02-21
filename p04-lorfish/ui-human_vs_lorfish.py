@@ -4,7 +4,7 @@ import os
 import pygame
 import pygame.freetype
 import sys
-from simple_engine import SimpleEngine
+from lorfish import LorFish
 
 # Initialize pygame
 pygame.init()
@@ -43,7 +43,7 @@ PIECE_NAMES = {
 class ChessGUI:
     def __init__(self):
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        pygame.display.set_caption("Human vs Simple Engine - Chess (Images)")
+        pygame.display.set_caption("Human vs LorFish - Chess")
         self.clock = pygame.time.Clock()
         self.board = chess.Board()
         #self.board = chess.Board("7k/7p/6Pp/8/8/7P/7P/7K b - - 0 1")
@@ -51,7 +51,7 @@ class ChessGUI:
         #self.board = chess.Board("6k1/6q1/6q1/8/8/8/8/7K w - - 24 13")
         #self.board = chess.Board("r1b1k1nr/pp3ppp/1q2p3/3pP3/1b1N4/N7/PP1B1PPP/R2QKB1R b KQkq - 0 9")
         #self.board = chess.Board("7k/2PP4/8/8/8/8/8/2K5 w - - 0 1")
-        self.engine = SimpleEngine(depth=ENGINE_DEPTH)
+        self.engine = LorFish(depth=ENGINE_DEPTH)
 
         self.font_text = pygame.freetype.SysFont("Arial", 24)
         self.font_small = pygame.freetype.SysFont("Arial", 18)
@@ -241,7 +241,7 @@ class ChessGUI:
         self.screen.blit(white_text, (panel_x + 20, y_offset))
         y_offset += 30
 
-        black_text, _ = self.font_small.render("Black: Simple Engine", TEXT_COLOR)
+        black_text, _ = self.font_small.render("Black: LorFish", TEXT_COLOR)
         self.screen.blit(black_text, (panel_x + 20, y_offset))
         y_offset += 50
 
@@ -495,9 +495,9 @@ class ChessGUI:
 
         # Save game to PGN
         game = chess.pgn.Game.from_board(self.board)
-        game.headers["Event"] = "Human vs Simple Engine"
+        game.headers["Event"] = "Human vs LorFish"
         game.headers["White"] = "Human"
-        game.headers["Black"] = "Simple Engine"
+        game.headers["Black"] = "LorFish"
         game.headers["Result"] = self.board.result()
 
         print("\nGame in PGN format:")

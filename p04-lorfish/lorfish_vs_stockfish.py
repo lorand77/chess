@@ -6,25 +6,25 @@ import os
 # Configuration Constants
 STOCKFISH_PATH = r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe"
 #STOCKFISH_PATH = "/usr/local/bin/stockfish"
-DEFAULT_SIMPLE_ENGINE_DEPTH = 4
+DEFAULT_LORFISH_DEPTH = 4
 DEFAULT_STOCKFISH_ELO = 1600
 DEFAULT_NUM_GAMES = 10
 STOCKFISH_TIME_LIMIT = 0.5  # seconds per move
 STOCKFISH_THREADS = 4
 
-# Add parent directory to path to import simple_engine
+# Add parent directory to path to import lorfish
 sys.path.insert(0, os.path.dirname(__file__))
-from simple_engine import SimpleEngine
+from lorfish import LorFish
 
 
-def play_game(simple_engine, stockfish_engine, simple_plays_white=True):
-    """Play a single game between SimpleEngine and Stockfish"""
+def play_game(lorfish_engine, stockfish_engine, lorfish_plays_white=True):
+    """Play a single game between LorFish and Stockfish"""
     board = chess.Board()
     
     while not board.is_game_over(claim_draw=True):
         # White's turn
-        if simple_plays_white:
-            move = simple_engine.get_best_move(board)
+        if lorfish_plays_white:
+            move = lorfish_engine.get_best_move(board)
         else:
             result = stockfish_engine.play(board, chess.engine.Limit(time=STOCKFISH_TIME_LIMIT))
             move = result.move
@@ -35,8 +35,8 @@ def play_game(simple_engine, stockfish_engine, simple_plays_white=True):
             break
         
         # Black's turn
-        if not simple_plays_white:
-            move = simple_engine.get_best_move(board)
+        if not lorfish_plays_white:
+            move = lorfish_engine.get_best_move(board)
         else:
             result = stockfish_engine.play(board, chess.engine.Limit(time=STOCKFISH_TIME_LIMIT))
             move = result.move
@@ -46,12 +46,12 @@ def play_game(simple_engine, stockfish_engine, simple_plays_white=True):
     return board.result()
 
 
-def play_match(simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH, stockfish_elo=DEFAULT_STOCKFISH_ELO, num_games=DEFAULT_NUM_GAMES):
-    """Play a match of multiple games between SimpleEngine and Stockfish"""
+def play_match(lorfish_depth=DEFAULT_LORFISH_DEPTH, stockfish_elo=DEFAULT_STOCKFISH_ELO, num_games=DEFAULT_NUM_GAMES):
+    """Play a match of multiple games between LorFish and Stockfish"""
     
-    print(f"SimpleEngine (depth {simple_depth}) vs Stockfish (Elo {stockfish_elo}) - {num_games} games\n")
+    print(f"LorFish (depth {lorfish_depth}) vs Stockfish (Elo {stockfish_elo}) - {num_games} games\n")
     
-    simple_engine = SimpleEngine(depth=simple_depth)
+    lorfish_engine = LorFish(depth=lorfish_depth)
     
     # Initialize Stockfish
     stockfish = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
@@ -64,42 +64,42 @@ def play_match(simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH, stockfish_elo=DEFAULT_S
     })
     
     # Track results
-    simple_wins = 0
+    lorfish_wins = 0
     stockfish_wins = 0
     draws = 0
     
     # Play games
     for game_num in range(1, num_games + 1):
-        simple_plays_white = (game_num % 2 == 1)
-        result = play_game(simple_engine, stockfish, simple_plays_white)
+        lorfish_plays_white = (game_num % 2 == 1)
+        result = play_game(lorfish_engine, stockfish, lorfish_plays_white)
         
         # Update statistics
         if result == "1-0":
-            if simple_plays_white:
-                simple_wins += 1
+            if lorfish_plays_white:
+                lorfish_wins += 1
             else:
                 stockfish_wins += 1
         elif result == "0-1":
-            if simple_plays_white:
+            if lorfish_plays_white:
                 stockfish_wins += 1
             else:
-                simple_wins += 1
+                lorfish_wins += 1
         else:
             draws += 1
         
-        score = simple_wins + draws * 0.5
-        print(f"Game {game_num}: {result}  |  SimpleEngine: {simple_wins}W {draws}D {stockfish_wins}L  Score: {score}/{game_num}")
+        score = lorfish_wins + draws * 0.5
+        print(f"Game {game_num}: {result}  |  LorFish: {lorfish_wins}W {draws}D {stockfish_wins}L  Score: {score}/{game_num}")
     
     stockfish.quit()
     
     # Print summary
-    print(f"\nSimpleEngine: {simple_wins}W {draws}D {stockfish_wins}L (Score: {score}/{num_games})")
-    print(f"Win rate: {simple_wins/num_games*100:.1f}%\n")
+    print(f"\nLorFish: {lorfish_wins}W {draws}D {stockfish_wins}L (Score: {score}/{num_games})")
+    print(f"Win rate: {lorfish_wins/num_games*100:.1f}%\n")
 
 
 if __name__ == "__main__":
     play_match(
-        simple_depth=DEFAULT_SIMPLE_ENGINE_DEPTH,
+        lorfish_depth=DEFAULT_LORFISH_DEPTH,
         stockfish_elo=DEFAULT_STOCKFISH_ELO,
         num_games=DEFAULT_NUM_GAMES
     )
