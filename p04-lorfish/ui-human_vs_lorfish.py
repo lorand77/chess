@@ -11,6 +11,8 @@ pygame.init()
 pygame.freetype.init()
 
 # Constants
+ENGINE_DEPTH = 2
+#
 SQUARE_SIZE = 80
 PIECE_SCALE = 0.75
 BOARD_SIZE = 8 * SQUARE_SIZE
@@ -18,7 +20,6 @@ INFO_WIDTH = 300
 WINDOW_WIDTH = BOARD_SIZE + INFO_WIDTH
 WINDOW_HEIGHT = BOARD_SIZE
 FPS = 60
-ENGINE_DEPTH = 2
 
 # Colors
 WHITE = (240, 217, 181)

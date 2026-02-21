@@ -7,8 +7,8 @@ import os
 STOCKFISH_PATH = r"C:\Users\lorand\Programs\stockfish\stockfish-windows-x86-64-avx2.exe"
 #STOCKFISH_PATH = "/usr/local/bin/stockfish"
 DEFAULT_LORFISH_DEPTH = 4
-DEFAULT_STOCKFISH_ELO = 1600
-DEFAULT_NUM_GAMES = 10
+DEFAULT_STOCKFISH_ELO = 1800
+DEFAULT_NUM_GAMES = 100
 STOCKFISH_TIME_LIMIT = 0.5  # seconds per move
 STOCKFISH_THREADS = 4
 
