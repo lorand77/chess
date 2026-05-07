@@ -97,6 +97,8 @@ function render() {
       s += ' — Stalemate';
     } else if (chess.isInsufficientMaterial()) {
       s += ' — Insufficient material';
+    } else if (chess.isThreefoldRepetition()) {
+      s += ' — Threefold repetition';
     } else if (chess.halfmove >= 100) {
       s += ' — 50-move rule';
     }

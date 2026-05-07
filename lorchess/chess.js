@@ -30,6 +30,22 @@ class Chess {
     this.halfmove = 0;
     this.fullmove = 1;
     this.history = [];
+    this.positionCounts = new Map();
+    this.positionCounts.set(this.positionKey(), 1);
+  }
+
+  // FEN-like key for repetition detection: pieces + turn + castling + ep target.
+  positionKey() {
+    let s = '';
+    for (let i = 0; i < 64; i++) {
+      const p = this.squares[i];
+      s += p ? (p.c === W ? p.t.toUpperCase() : p.t) : '.';
+    }
+    s += '|' + this.turn;
+    s += '|' + (this.castling.K ? 'K' : '') + (this.castling.Q ? 'Q' : '')
+            + (this.castling.k ? 'k' : '') + (this.castling.q ? 'q' : '');
+    s += '|' + (this.ep != null ? this.ep : '-');
+    return s;
   }
 
   pseudoMovesFrom(sq, c) {
@@ -212,7 +228,8 @@ class Chess {
           const passSq = m.castle === 'K' ? sqIdx(5, home) : sqIdx(3, home);
           if (this.isAttacked(passSq, opp(c))) continue;
         }
-        this.makeMove(m);
+        // Validation make/undo — skip repetition tracking for performance.
+        this.makeMove(m, false);
         if (!this.isAttacked(this.findKing(c), opp(c))) moves.push(m);
         this.undoMove();
       }
@@ -220,13 +237,13 @@ class Chess {
     return moves;
   }
 
-  makeMove(m) {
+  makeMove(m, trackPosition = true) {
     const piece = this.squares[m.from];
     const captured = m.enpassant
       ? this.squares[sqIdx(fileOf(m.to), rankOf(m.from))]
       : this.squares[m.to];
 
-    this.history.push({
+    const histEntry = {
       move: m,
       captured,
       castling: { K: this.castling.K, Q: this.castling.Q, k: this.castling.k, q: this.castling.q },
@@ -234,7 +251,10 @@ class Chess {
       halfmove: this.halfmove,
       fullmove: this.fullmove,
       turn: this.turn,
-    });
+      tracked: trackPosition,
+      newKey: null,
+    };
+    this.history.push(histEntry);
 
     this.squares[m.from] = null;
     this.squares[m.to] = m.promo ? { t: m.promo, c: piece.c } : piece;
@@ -270,12 +290,24 @@ class Chess {
 
     if (this.turn === B) this.fullmove++;
     this.turn = opp(this.turn);
+
+    if (trackPosition) {
+      const key = this.positionKey();
+      histEntry.newKey = key;
+      this.positionCounts.set(key, (this.positionCounts.get(key) || 0) + 1);
+    }
   }
 
   undoMove() {
     if (this.history.length === 0) return;
     const h = this.history.pop();
     const m = h.move;
+
+    if (h.tracked && h.newKey) {
+      const cur = (this.positionCounts.get(h.newKey) || 0) - 1;
+      if (cur <= 0) this.positionCounts.delete(h.newKey);
+      else this.positionCounts.set(h.newKey, cur);
+    }
 
     this.castling = h.castling;
     this.ep = h.ep;
@@ -328,12 +360,21 @@ class Chess {
 
   isCheckmate() { return this.inCheck() && this.legalMoves().length === 0; }
   isStalemate() { return !this.inCheck() && this.legalMoves().length === 0; }
+  isThreefoldRepetition() {
+    return (this.positionCounts.get(this.positionKey()) || 0) >= 3;
+  }
+  isFivefoldRepetition() {
+    return (this.positionCounts.get(this.positionKey()) || 0) >= 5;
+  }
   isGameOver() {
-    return this.legalMoves().length === 0 || this.isInsufficientMaterial() || this.halfmove >= 100;
+    return this.legalMoves().length === 0
+        || this.isInsufficientMaterial()
+        || this.halfmove >= 100
+        || this.isThreefoldRepetition();
   }
   result() {
     if (this.isCheckmate()) return this.turn === W ? '0-1' : '1-0';
-    if (this.legalMoves().length === 0 || this.isInsufficientMaterial() || this.halfmove >= 100) return '1/2-1/2';
+    if (this.isGameOver()) return '1/2-1/2';
     return '*';
   }
 
