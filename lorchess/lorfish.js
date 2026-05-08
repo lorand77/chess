@@ -155,16 +155,19 @@ const LorFish = {
       const san = chess.moveToSan(m);
       chess.makeMove(m);
       // Full window at root so logged evals are exact, not pruning bounds.
-      const v = -this.negamax(chess, depth - 1, -Infinity, Infinity);
+      const raw = -this.negamax(chess, depth - 1, -Infinity, Infinity);
       chess.undoMove();
+      // Tiny tiebreaker noise so equal-ish moves vary game to game.
+      const noise = Math.floor(Math.random() * 21) - 10; // -10..+10
+      const v = raw + noise;
       if (v > bestVal) { bestVal = v; bestMove = m; }
-      evals.push({ san, v });
+      evals.push({ san, raw, v });
     }
     const dt = ((performance.now() - t0) / 1000).toFixed(3);
     evals.sort((a, b) => b.v - a.v);
     const side = chess.turn === W ? 'White' : 'Black';
     console.log(`LorFish evals (${side} to move, depth=${depth}):`);
-    for (const e of evals) console.log(`  ${e.san.padEnd(8)} ${e.v}`);
+    for (const e of evals) console.log(`  ${e.san.padEnd(8)} ${e.v}  [raw=${e.raw}]`);
     console.log(`nodes=${this.nodes} time=${dt}s maxQ=${this.maxQ}`);
     return bestMove;
   },
