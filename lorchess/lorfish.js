@@ -69,6 +69,29 @@ const LorFish = {
     ],
   },
 
+  // Sum of non-pawn piece weights across both sides.
+  // 24 at the starting position; 0 in a pure pawn endgame.
+  gamePhase(chess) {
+    let phase = 0;
+    for (let i = 0; i < 64; i++) {
+      const p = chess.squares[i];
+      if (!p) continue;
+      if (p.t === 'n' || p.t === 'b') phase += 1;
+      else if (p.t === 'r')           phase += 2;
+      else if (p.t === 'q')           phase += 4;
+    }
+    return phase;
+  },
+
+  // Boost search depth as the position simplifies, so endgame mates fall
+  // within the horizon without slowing middlegame play.
+  adaptiveDepth(chess, baseDepth) {
+    const phase = this.gamePhase(chess);
+    if (phase <= 6)  return baseDepth + 2;
+    if (phase <= 12) return baseDepth + 1;
+    return baseDepth;
+  },
+
   orderMoves(chess, moves) {
     // MVV-LVA + promotion bonus. Skipping gives_check bonus for performance.
     const scored = new Array(moves.length);
@@ -147,6 +170,7 @@ const LorFish = {
     this.nodes = 0;
     this.maxQ = 0;
     const t0 = performance.now();
+    const effDepth = this.adaptiveDepth(chess, depth);
     let bestMove = null, bestVal = -Infinity;
     const moves = this.orderMoves(chess, chess.legalMoves());
     const evals = [];
@@ -155,10 +179,11 @@ const LorFish = {
       const san = chess.moveToSan(m);
       chess.makeMove(m);
       // Full window at root so logged evals are exact, not pruning bounds.
-      const raw = -this.negamax(chess, depth - 1, -Infinity, Infinity);
+      const raw = -this.negamax(chess, effDepth - 1, -Infinity, Infinity);
       chess.undoMove();
       // Tiny tiebreaker noise so equal-ish moves vary game to game.
-      const noise = Math.floor(Math.random() * 21) - 10; // -10..+10
+      // Skip noise on mate scores so the fastest mate is always chosen.
+      const noise = raw >= 99000 ? 0 : Math.floor(Math.random() * 21) - 10; // -10..+10
       const v = raw + noise;
       if (v > bestVal) { bestVal = v; bestMove = m; }
       evals.push({ san, raw, v });
@@ -166,7 +191,8 @@ const LorFish = {
     const dt = ((performance.now() - t0) / 1000).toFixed(3);
     evals.sort((a, b) => b.v - a.v);
     const side = chess.turn === W ? 'White' : 'Black';
-    console.log(`LorFish evals (${side} to move, depth=${depth}):`);
+    const depthStr = effDepth === depth ? `depth=${depth}` : `depth=${depth} → ${effDepth}`;
+    console.log(`LorFish evals (${side} to move, ${depthStr}):`);
     for (const e of evals) console.log(`  ${e.san.padEnd(8)} ${e.v}  [raw=${e.raw}]`);
     console.log(`nodes=${this.nodes} time=${dt}s maxQ=${this.maxQ}`);
     return bestMove;
