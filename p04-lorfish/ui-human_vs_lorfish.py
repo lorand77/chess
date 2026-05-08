@@ -1,5 +1,6 @@
 import chess
 import chess.pgn
+import math
 import os
 import pygame
 import pygame.freetype
@@ -409,6 +410,21 @@ class ChessGUI:
 
         self.thinking = True
         pygame.display.flip()
+
+        # Log all legal moves for Black with eval scores (Black's POV), ordered best first
+        self.engine.nodes_visited = 0
+        self.engine.max_quiescence_depth = 0
+        scored_moves = []
+        for move in self.board.legal_moves:
+            san = self.board.san(move)
+            self.board.push(move)
+            score = -self.engine.negamax(self.board, self.engine.depth - 1, -math.inf, math.inf)
+            self.board.pop()
+            scored_moves.append((san, score))
+        scored_moves.sort(key=lambda x: x[1], reverse=True)
+        print(f"\nMove {self.board.fullmove_number}... Black legal moves (sorted by eval):")
+        for san, score in scored_moves:
+            print(f"  {san:8s} {int(score):+d}")
 
         # Get engine move
         engine_move = self.engine.get_best_move(self.board)
