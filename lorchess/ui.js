@@ -19,13 +19,6 @@ function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
 }
 
-function logLegalMoves() {
-  const moves = chess.legalMoves();
-  const side = chess.turn === W ? 'White' : 'Black';
-  const sans = moves.map(m => chess.moveToSan(m));
-  console.log(`[${side} to move] ${moves.length} legal moves: ${sans.join(' ')}`);
-}
-
 function render() {
   boardEl.innerHTML = '';
   const inCheckNow = chess.inCheck();
@@ -193,7 +186,6 @@ function doHumanMove(move) {
   selected = null;
   legalFromSelected = [];
   render();
-  logLegalMoves();
 
   if (!chess.isGameOver()) {
     setTimeout(makeEngineMove, 50);
@@ -216,7 +208,6 @@ function makeEngineMove() {
     }
     thinking = false;
     render();
-    logLegalMoves();
   }, 30);
 }
 
@@ -259,7 +250,6 @@ function undo() {
   selected = null;
   legalFromSelected = [];
   render();
-  logLegalMoves();
 }
 
 document.addEventListener('keydown', e => {
@@ -276,8 +266,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   promoEl.classList.remove('show');
   thinking = false;
   render();
-  logLegalMoves();
 });
 
 render();
-logLegalMoves();
