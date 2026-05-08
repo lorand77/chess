@@ -19,6 +19,13 @@ function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
 }
 
+function logLegalMoves() {
+  const moves = chess.legalMoves();
+  const side = chess.turn === W ? 'White' : 'Black';
+  const sans = moves.map(m => chess.moveToSan(m));
+  console.log(`[${side} to move] ${moves.length} legal moves: ${sans.join(' ')}`);
+}
+
 function render() {
   boardEl.innerHTML = '';
   const inCheckNow = chess.inCheck();
@@ -112,8 +119,32 @@ function render() {
     statusEl.className = '';
   }
 
-  historyEl.innerHTML = moveHistory.join('<br>');
+  historyEl.textContent = buildPgn();
   historyEl.scrollTop = historyEl.scrollHeight;
+}
+
+function buildPgn() {
+  const d = new Date();
+  const dateStr = d.getFullYear() + '.'
+    + String(d.getMonth() + 1).padStart(2, '0') + '.'
+    + String(d.getDate()).padStart(2, '0');
+  const result = chess.isGameOver() ? chess.result() : '*';
+
+  let pgn = '';
+  pgn += '[Event "Human vs LorFish"]\n';
+  pgn += `[Date "${dateStr}"]\n`;
+  pgn += '[White "Human"]\n';
+  pgn += '[Black "LorFish"]\n';
+  pgn += `[Result "${result}"]\n`;
+  pgn += '\n';
+
+  let body = '';
+  for (let i = 0; i < moveHistory.length; i++) {
+    if (i % 2 === 0) body += (i / 2 + 1) + '. ';
+    body += moveHistory[i] + ' ';
+  }
+  body += result;
+  return pgn + body;
 }
 
 function onSquareClick(sq) {
@@ -155,14 +186,14 @@ function onSquareClick(sq) {
 }
 
 function doHumanMove(move) {
-  const moveNum = chess.fullmove;
   const san = chess.moveToSan(move);
   chess.makeMove(move);
   lastMove = move;
-  moveHistory.push(`${moveNum}. ${san}`);
+  moveHistory.push(san);
   selected = null;
   legalFromSelected = [];
   render();
+  logLegalMoves();
 
   if (!chess.isGameOver()) {
     setTimeout(makeEngineMove, 50);
@@ -178,14 +209,14 @@ function makeEngineMove() {
     const depth = parseInt(document.getElementById('depth').value, 10);
     const move = LorFish.getBestMove(chess, depth);
     if (move) {
-      const moveNum = chess.fullmove;
       const san = chess.moveToSan(move);
       chess.makeMove(move);
       lastMove = move;
-      moveHistory.push(`${moveNum}... ${san}`);
+      moveHistory.push(san);
     }
     thinking = false;
     render();
+    logLegalMoves();
   }, 30);
 }
 
@@ -228,6 +259,7 @@ function undo() {
   selected = null;
   legalFromSelected = [];
   render();
+  logLegalMoves();
 }
 
 document.addEventListener('keydown', e => {
@@ -244,6 +276,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   promoEl.classList.remove('show');
   thinking = false;
   render();
+  logLegalMoves();
 });
 
 render();
+logLegalMoves();

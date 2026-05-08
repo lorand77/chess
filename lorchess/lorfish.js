@@ -148,16 +148,23 @@ const LorFish = {
     this.maxQ = 0;
     const t0 = performance.now();
     let bestMove = null, bestVal = -Infinity;
-    let alpha = -Infinity, beta = Infinity;
     const moves = this.orderMoves(chess, chess.legalMoves());
+    const evals = [];
     for (const m of moves) {
+      // SAN must be built BEFORE makeMove (needs pre-move state).
+      const san = chess.moveToSan(m);
       chess.makeMove(m);
-      const v = -this.negamax(chess, depth - 1, -beta, -alpha);
+      // Full window at root so logged evals are exact, not pruning bounds.
+      const v = -this.negamax(chess, depth - 1, -Infinity, Infinity);
       chess.undoMove();
       if (v > bestVal) { bestVal = v; bestMove = m; }
-      if (v > alpha) alpha = v;
+      evals.push({ san, v });
     }
     const dt = ((performance.now() - t0) / 1000).toFixed(3);
+    evals.sort((a, b) => b.v - a.v);
+    const side = chess.turn === W ? 'White' : 'Black';
+    console.log(`LorFish evals (${side} to move, depth=${depth}):`);
+    for (const e of evals) console.log(`  ${e.san.padEnd(8)} ${e.v}`);
     console.log(`nodes=${this.nodes} time=${dt}s maxQ=${this.maxQ}`);
     return bestMove;
   },
