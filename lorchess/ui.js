@@ -37,19 +37,21 @@ function render() {
         div.classList.add('check');
       }
 
-      // Coordinates: ranks on file a, files on rank 1
+      // Coordinates: ranks on file a, files on rank 1.
+      // Text color is the OPPOSITE shade of the square so it's readable.
+      const coordColor = ((r + f) % 2 === 0) ? '#f0d9b5' : '#b58863';
       if (f === 0) {
         const c = document.createElement('div');
         c.className = 'coord rank';
         c.textContent = r + 1;
-        c.style.color = ((r + f) % 2 === 0) ? '#b58863' : '#f0d9b5';
+        c.style.color = coordColor;
         div.appendChild(c);
       }
       if (r === 0) {
         const c = document.createElement('div');
         c.className = 'coord file';
         c.textContent = String.fromCharCode(97 + f);
-        c.style.color = ((r + f) % 2 === 0) ? '#b58863' : '#f0d9b5';
+        c.style.color = coordColor;
         div.appendChild(c);
       }
 
