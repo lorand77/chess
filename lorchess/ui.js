@@ -231,7 +231,7 @@ function doHumanMove(move) {
 }
 
 function makeEngineMove() {
-  if (chess.isGameOver() || chess.turn === humanColor) return;
+  if (thinking || chess.isGameOver() || chess.turn === humanColor) return;
   thinking = true;
   render();
   // Defer to next tick so the "thinking" UI paints before we block.
@@ -319,6 +319,13 @@ function startNewGame() {
 }
 
 document.addEventListener('keydown', e => {
+  // Block keyboard shortcuts while the FEN modal is open.
+  if (fenPanel.classList.contains('show')) {
+    if (e.key === 'Escape') {
+      fenPanel.classList.remove('show');
+    }
+    return;
+  }
   if (e.key === 'r' || e.key === 'R') undo();
 });
 document.getElementById('undoBtn').addEventListener('click', undo);
