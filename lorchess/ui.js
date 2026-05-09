@@ -8,6 +8,11 @@ let lastMove = null;
 let promotionPending = null;
 let thinking = false;
 let moveHistory = [];
+// Fullmove number and side-to-move at the start of the current PGN body,
+// plus the FEN string if the game was set up from one (null if standard start).
+let startFullmove = 1;
+let startTurn = W;
+let startFen = null;
 
 const boardEl       = document.getElementById('board');
 const turnEl        = document.getElementById('turn');
@@ -148,12 +153,26 @@ function buildPgn() {
   pgn += `[White "${whiteName}"]\n`;
   pgn += `[Black "${blackName}"]\n`;
   pgn += `[Result "${result}"]\n`;
+  if (startFen) {
+    pgn += '[SetUp "1"]\n';
+    pgn += `[FEN "${startFen}"]\n`;
+  }
   pgn += '\n';
 
+  // Move numbers continue from the position's fullmove counter, not 1.
+  // If black moves first (loaded FEN), the first move uses "N..." notation.
   let body = '';
+  let fm = startFullmove;
+  let turn = startTurn;
   for (let i = 0; i < moveHistory.length; i++) {
-    if (i % 2 === 0) body += (i / 2 + 1) + '. ';
-    body += moveHistory[i] + ' ';
+    if (turn === W) {
+      body += fm + '. ' + moveHistory[i] + ' ';
+    } else {
+      if (i === 0) body += fm + '... ' + moveHistory[i] + ' ';
+      else        body += moveHistory[i] + ' ';
+      fm++;
+    }
+    turn = turn === W ? B : W;
   }
   body += result;
   return pgn + body;
@@ -293,6 +312,9 @@ function refreshGameState() {
 
 function startNewGame() {
   chess.reset();
+  startFullmove = 1;
+  startTurn = W;
+  startFen = null;
   refreshGameState();
 }
 
@@ -321,6 +343,9 @@ fenLoadBtn.addEventListener('click', () => {
     fenError.textContent = e.message;
     return;
   }
+  startFullmove = chess.fullmove;
+  startTurn = chess.turn;
+  startFen = fen;
   fenPanel.classList.remove('show');
   refreshGameState();
 });
