@@ -18,6 +18,12 @@ const promoOpts     = document.getElementById('promoOptions');
 const colorSelectEl = document.getElementById('humanColor');
 const whiteLabelEl  = document.getElementById('whiteLabel');
 const blackLabelEl  = document.getElementById('blackLabel');
+const loadFenBtn    = document.getElementById('loadFenBtn');
+const fenPanel      = document.getElementById('fenPanel');
+const fenText       = document.getElementById('fenText');
+const fenLoadBtn    = document.getElementById('fenLoadBtn');
+const fenCancelBtn  = document.getElementById('fenCancelBtn');
+const fenError      = document.getElementById('fenError');
 
 function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
@@ -265,11 +271,12 @@ function undo() {
   render();
 }
 
-function startNewGame() {
+// Initialise the UI for a fresh game. The chess instance must already be in
+// the desired starting position (default reset, or a FEN load).
+function refreshGameState() {
   humanColor = colorSelectEl.value === 'b' ? B : W;
   whiteLabelEl.textContent = 'White: ' + (humanColor === W ? 'Human' : 'LorFish');
   blackLabelEl.textContent = 'Black: ' + (humanColor === W ? 'LorFish' : 'Human');
-  chess.reset();
   moveHistory = [];
   lastMove = null;
   selected = null;
@@ -278,8 +285,15 @@ function startNewGame() {
   promoEl.classList.remove('show');
   thinking = false;
   render();
-  // If the human plays black, the engine (white) makes the first move.
-  if (chess.turn !== humanColor) setTimeout(makeEngineMove, 50);
+  // If it's not the human's turn, the engine plays.
+  if (chess.turn !== humanColor && !chess.isGameOver()) {
+    setTimeout(makeEngineMove, 50);
+  }
+}
+
+function startNewGame() {
+  chess.reset();
+  refreshGameState();
 }
 
 document.addEventListener('keydown', e => {
@@ -288,5 +302,27 @@ document.addEventListener('keydown', e => {
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.getElementById('resetBtn').addEventListener('click', startNewGame);
 colorSelectEl.addEventListener('change', startNewGame);
+
+loadFenBtn.addEventListener('click', () => {
+  fenText.value = '';
+  fenError.textContent = '';
+  fenPanel.classList.add('show');
+  fenText.focus();
+});
+fenCancelBtn.addEventListener('click', () => {
+  fenPanel.classList.remove('show');
+});
+fenLoadBtn.addEventListener('click', () => {
+  const fen = fenText.value.trim();
+  if (!fen) { fenError.textContent = 'Paste a FEN string first.'; return; }
+  try {
+    chess.loadFen(fen);
+  } catch (e) {
+    fenError.textContent = e.message;
+    return;
+  }
+  fenPanel.classList.remove('show');
+  refreshGameState();
+});
 
 startNewGame();

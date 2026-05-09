@@ -34,6 +34,68 @@ class Chess {
     this.positionCounts.set(this.positionKey(), 1);
   }
 
+  // Load a position from FEN. Throws on invalid input.
+  loadFen(fen) {
+    const parts = String(fen || '').trim().split(/\s+/);
+    if (parts.length < 4) throw new Error('FEN must have at least 4 fields');
+
+    const newSquares = new Array(64).fill(null);
+    const ranks = parts[0].split('/');
+    if (ranks.length !== 8) throw new Error('FEN must have 8 ranks separated by "/"');
+
+    for (let i = 0; i < 8; i++) {
+      const r = 7 - i; // FEN lists rank 8 first, our index 7 = rank 8
+      let f = 0;
+      for (const ch of ranks[i]) {
+        if (ch >= '1' && ch <= '8') {
+          f += ch.charCodeAt(0) - 48;
+        } else if ('prnbqkPRNBQK'.includes(ch)) {
+          if (f >= 8) throw new Error(`FEN rank ${8 - i} overflows 8 files`);
+          const c = ch === ch.toUpperCase() ? W : B;
+          newSquares[sqIdx(f, r)] = { t: ch.toLowerCase(), c };
+          f++;
+        } else {
+          throw new Error(`FEN: bad piece char "${ch}"`);
+        }
+      }
+      if (f !== 8) throw new Error(`FEN rank ${8 - i} does not sum to 8 squares`);
+    }
+
+    let wKings = 0, bKings = 0;
+    for (const p of newSquares) {
+      if (!p || p.t !== 'k') continue;
+      if (p.c === W) wKings++; else bKings++;
+    }
+    if (wKings !== 1 || bKings !== 1) {
+      throw new Error('FEN must have exactly one king per side');
+    }
+
+    this.squares = newSquares;
+    this.turn = parts[1] === 'b' ? B : W;
+    const cr = parts[2] || '-';
+    this.castling = {
+      K: cr.includes('K'),
+      Q: cr.includes('Q'),
+      k: cr.includes('k'),
+      q: cr.includes('q'),
+    };
+    if (parts[3] && parts[3] !== '-') {
+      const file = parts[3].charCodeAt(0) - 97;
+      const rank = parseInt(parts[3][1], 10) - 1;
+      if (file < 0 || file > 7 || isNaN(rank) || rank < 0 || rank > 7) {
+        throw new Error(`FEN: bad en-passant square "${parts[3]}"`);
+      }
+      this.ep = sqIdx(file, rank);
+    } else {
+      this.ep = null;
+    }
+    this.halfmove = parts[4] ? parseInt(parts[4], 10) || 0 : 0;
+    this.fullmove = parts[5] ? parseInt(parts[5], 10) || 1 : 1;
+    this.history = [];
+    this.positionCounts = new Map();
+    this.positionCounts.set(this.positionKey(), 1);
+  }
+
   // FEN-like key for repetition detection: pieces + turn + castling + ep target.
   positionKey() {
     let s = '';

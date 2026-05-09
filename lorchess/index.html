@@ -39,7 +39,17 @@
     <p style="margin-top:12px;">
       <button id="undoBtn">Undo (R)</button>
       <button id="resetBtn">New Game</button>
+      <button id="loadFenBtn">Load FEN</button>
     </p>
+    <div id="fenPanel" class="fen-panel">
+      <textarea id="fenText" rows="3"
+        placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
+      <p>
+        <button id="fenLoadBtn">Load</button>
+        <button id="fenCancelBtn">Cancel</button>
+      </p>
+      <div id="fenError" class="fen-error"></div>
+    </div>
     <p style="color:#969696; font-size:12px;">Click a piece, then click a destination.</p>
   </div>
 </div>

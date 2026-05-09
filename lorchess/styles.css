@@ -111,3 +111,19 @@ select {
 .thinking { color: #ffc864; }
 .check-text { color: #ff6464; }
 .game-over { color: #ff6464; }
+
+.fen-panel { display: none; margin-top: 8px; }
+.fen-panel.show { display: block; }
+.fen-panel textarea {
+  width: 260px;
+  background: #1e1e1e;
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+.fen-panel p { margin: 6px 0; }
+.fen-error { color: #ff6464; font-size: 12px; min-height: 16px; }
