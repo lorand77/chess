@@ -1,6 +1,7 @@
 "use strict";
 
 const chess = new Chess();
+let humanColor = W;
 let selected = null;
 let legalFromSelected = [];
 let lastMove = null;
@@ -8,12 +9,15 @@ let promotionPending = null;
 let thinking = false;
 let moveHistory = [];
 
-const boardEl   = document.getElementById('board');
-const turnEl    = document.getElementById('turn');
-const statusEl  = document.getElementById('status');
-const historyEl = document.getElementById('history');
-const promoEl   = document.getElementById('promo');
-const promoOpts = document.getElementById('promoOptions');
+const boardEl       = document.getElementById('board');
+const turnEl        = document.getElementById('turn');
+const statusEl      = document.getElementById('status');
+const historyEl     = document.getElementById('history');
+const promoEl       = document.getElementById('promo');
+const promoOpts     = document.getElementById('promoOptions');
+const colorSelectEl = document.getElementById('humanColor');
+const whiteLabelEl  = document.getElementById('whiteLabel');
+const blackLabelEl  = document.getElementById('blackLabel');
 
 function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
@@ -22,8 +26,12 @@ function pieceImgSrc(piece) {
 function render() {
   boardEl.innerHTML = '';
   const inCheckNow = chess.inCheck();
-  for (let r = 7; r >= 0; r--) {
-    for (let f = 0; f < 8; f++) {
+  const flip = humanColor === B;
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      // row/col are visual indices (0=top/left). Translate to board r/f.
+      const r = flip ? row : 7 - row;
+      const f = flip ? 7 - col : col;
       const sq = sqIdx(f, r);
       const div = document.createElement('div');
       div.className = 'square ' + ((r + f) % 2 === 0 ? 'dark' : 'light');
@@ -37,17 +45,18 @@ function render() {
         div.classList.add('check');
       }
 
-      // Coordinates: ranks on file a, files on rank 1.
-      // Text color is the OPPOSITE shade of the square so it's readable.
+      // Coordinates: rank labels in leftmost displayed column,
+      // file labels in bottom displayed row. Text uses the opposite
+      // shade of the square so it's readable.
       const coordColor = ((r + f) % 2 === 0) ? '#f0d9b5' : '#b58863';
-      if (f === 0) {
+      if (col === 0) {
         const c = document.createElement('div');
         c.className = 'coord rank';
         c.textContent = r + 1;
         c.style.color = coordColor;
         div.appendChild(c);
       }
-      if (r === 0) {
+      if (row === 7) {
         const c = document.createElement('div');
         c.className = 'coord file';
         c.textContent = String.fromCharCode(97 + f);
@@ -124,12 +133,14 @@ function buildPgn() {
     + String(d.getMonth() + 1).padStart(2, '0') + '.'
     + String(d.getDate()).padStart(2, '0');
   const result = chess.isGameOver() ? chess.result() : '*';
+  const whiteName = humanColor === W ? 'Human' : 'LorFish';
+  const blackName = humanColor === W ? 'LorFish' : 'Human';
 
   let pgn = '';
   pgn += '[Event "Human vs LorFish"]\n';
   pgn += `[Date "${dateStr}"]\n`;
-  pgn += '[White "Human"]\n';
-  pgn += '[Black "LorFish"]\n';
+  pgn += `[White "${whiteName}"]\n`;
+  pgn += `[Black "${blackName}"]\n`;
   pgn += `[Result "${result}"]\n`;
   pgn += '\n';
 
@@ -144,11 +155,11 @@ function buildPgn() {
 
 function onSquareClick(sq) {
   if (promotionPending || thinking || chess.isGameOver()) return;
-  if (chess.turn !== W) return;
+  if (chess.turn !== humanColor) return;
 
   if (selected === null) {
     const piece = chess.squares[sq];
-    if (piece && piece.c === W) {
+    if (piece && piece.c === humanColor) {
       selected = sq;
       legalFromSelected = chess.legalMoves().filter(m => m.from === sq);
       render();
@@ -170,7 +181,7 @@ function onSquareClick(sq) {
 
   // Reselect or deselect
   const piece = chess.squares[sq];
-  if (piece && piece.c === W) {
+  if (piece && piece.c === humanColor) {
     selected = sq;
     legalFromSelected = chess.legalMoves().filter(m => m.from === sq);
   } else {
@@ -195,7 +206,7 @@ function doHumanMove(move) {
 }
 
 function makeEngineMove() {
-  if (chess.isGameOver() || chess.turn !== B) return;
+  if (chess.isGameOver() || chess.turn === humanColor) return;
   thinking = true;
   render();
   // Defer to next tick so the "thinking" UI paints before we block.
@@ -219,7 +230,7 @@ function showPromotionDialog() {
     const opt = document.createElement('div');
     opt.className = 'opt';
     const img = document.createElement('img');
-    img.src = `assets/w_${PIECE_NAMES[t]}_1x_ns.png`;
+    img.src = `assets/${humanColor}_${PIECE_NAMES[t]}_1x_ns.png`;
     opt.appendChild(img);
     opt.addEventListener('click', () => {
       const move = legalFromSelected.find(m => m.to === promotionPending.to && m.promo === t);
@@ -237,12 +248,12 @@ function undo() {
   promotionPending = null;
   promoEl.classList.remove('show');
 
-  // After a normal turn it's white to move; pop two plies (engine + human).
-  if (chess.turn === W && chess.history.length >= 2) {
+  // After a normal turn it's the human to move; pop two plies (engine + human).
+  if (chess.turn === humanColor && chess.history.length >= 2) {
     chess.undoMove();
     chess.undoMove();
     moveHistory.splice(-2);
-  } else if (chess.turn === B && chess.history.length >= 1) {
+  } else if (chess.turn !== humanColor && chess.history.length >= 1) {
     chess.undoMove();
     moveHistory.splice(-1);
   }
@@ -254,11 +265,10 @@ function undo() {
   render();
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'r' || e.key === 'R') undo();
-});
-document.getElementById('undoBtn').addEventListener('click', undo);
-document.getElementById('resetBtn').addEventListener('click', () => {
+function startNewGame() {
+  humanColor = colorSelectEl.value === 'b' ? B : W;
+  whiteLabelEl.textContent = 'White: ' + (humanColor === W ? 'Human' : 'LorFish');
+  blackLabelEl.textContent = 'Black: ' + (humanColor === W ? 'LorFish' : 'Human');
   chess.reset();
   moveHistory = [];
   lastMove = null;
@@ -268,6 +278,15 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   promoEl.classList.remove('show');
   thinking = false;
   render();
-});
+  // If the human plays black, the engine (white) makes the first move.
+  if (chess.turn !== humanColor) setTimeout(makeEngineMove, 50);
+}
 
-render();
+document.addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') undo();
+});
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('resetBtn').addEventListener('click', startNewGame);
+colorSelectEl.addEventListener('change', startNewGame);
+
+startNewGame();
