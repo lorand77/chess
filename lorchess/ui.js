@@ -43,10 +43,61 @@ const sounds = {
   checkmate: new Audio('assets/Checkmate.mp3'),
   draw:      new Audio('assets/Draw.mp3'),
   explosion: new Audio('assets/Explosion.mp3'),
-  scanner:   new Audio('assets/Scanner.mp3'),
 };
 Object.values(sounds).forEach(a => { a.preload = 'auto'; a.volume = 0.6; });
-sounds.scanner.volume = 0.3;
+
+// Scanner uses Web Audio API so its audio thread keeps playing during the
+// engine's synchronous search — an HTMLAudioElement stalls once its decode
+// buffer drains (~3-4s) when the main thread is blocked.
+let scannerCtx = null;
+let scannerBuffer = null;
+let scannerSource = null;
+let scannerGain = null;
+function ensureScannerCtx() {
+  if (scannerCtx) return;
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  if (!Ctor) { console.warn('Web Audio API not supported'); return; }
+  scannerCtx = new Ctor();
+  scannerGain = scannerCtx.createGain();
+  scannerGain.gain.value = 0.3;
+  scannerGain.connect(scannerCtx.destination);
+  fetch('assets/Scanner.mp3')
+    .then(r => {
+      if (!r.ok) throw new Error('fetch ' + r.status);
+      return r.arrayBuffer();
+    })
+    .then(buf => scannerCtx.decodeAudioData(buf))
+    .then(audioBuf => { scannerBuffer = audioBuf; })
+    .catch(err => console.error('Scanner audio load failed:', err));
+}
+// Browsers require a user gesture before an AudioContext can play. Unlock on
+// the first click/keypress so the buffer is ready before the engine thinks.
+function unlockScannerAudio() {
+  ensureScannerCtx();
+  if (scannerCtx && scannerCtx.state === 'suspended') {
+    scannerCtx.resume().catch(err => console.error('Scanner resume failed:', err));
+  }
+}
+document.addEventListener('click',   unlockScannerAudio, { once: true });
+document.addEventListener('keydown', unlockScannerAudio, { once: true });
+
+function playScanner() {
+  ensureScannerCtx();
+  if (!scannerCtx || !scannerBuffer) return;
+  if (scannerCtx.state === 'suspended') scannerCtx.resume();
+  stopScanner();
+  scannerSource = scannerCtx.createBufferSource();
+  scannerSource.buffer = scannerBuffer;
+  scannerSource.loop = true;
+  scannerSource.connect(scannerGain);
+  scannerSource.start(0);
+}
+function stopScanner() {
+  if (!scannerSource) return;
+  try { scannerSource.stop(); } catch (e) {}
+  scannerSource.disconnect();
+  scannerSource = null;
+}
 
 function play(a) {
   if (!a) return;
@@ -266,13 +317,12 @@ function makeEngineMove() {
   if (thinking || chess.isGameOver() || chess.turn === humanColor) return;
   thinking = true;
   render();
-  play(sounds.scanner);
+  playScanner();
   // Defer to next tick so the "thinking" UI paints before we block.
   setTimeout(() => {
     const depth = parseInt(document.getElementById('depth').value, 10);
     const move = LorFish.getBestMove(chess, depth);
-    sounds.scanner.pause();
-    sounds.scanner.currentTime = 0;
+    stopScanner();
     if (move) {
       const san = chess.moveToSan(move);
       chess.makeMove(move);
