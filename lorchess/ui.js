@@ -16,6 +16,7 @@ let startFen = null;
 
 const boardEl       = document.getElementById('board');
 const turnEl        = document.getElementById('turn');
+const scannerEl     = document.getElementById('scanner');
 const statusEl      = document.getElementById('status');
 const historyEl     = document.getElementById('history');
 const promoEl       = document.getElementById('promo');
@@ -133,13 +134,11 @@ function render() {
   if (chess.isGameOver() && !thinking) {
     turnEl.textContent = '';
     turnEl.className = '';
-  } else if (thinking) {
-    turnEl.textContent = 'Engine thinking...';
-    turnEl.className = 'thinking';
   } else {
     turnEl.textContent = 'Turn: ' + (chess.turn === W ? 'White' : 'Black');
     turnEl.className = '';
   }
+  scannerEl.classList.toggle('show', thinking);
 
   if (chess.isGameOver()) {
     let s = `Game Over: ${chess.result()}`;
