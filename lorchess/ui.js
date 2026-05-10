@@ -43,8 +43,10 @@ const sounds = {
   checkmate: new Audio('assets/Checkmate.mp3'),
   draw:      new Audio('assets/Draw.mp3'),
   explosion: new Audio('assets/Explosion.mp3'),
+  scanner:   new Audio('assets/Scanner.mp3'),
 };
 Object.values(sounds).forEach(a => { a.preload = 'auto'; a.volume = 0.6; });
+sounds.scanner.volume = 0.3;
 
 function play(a) {
   if (!a) return;
@@ -264,10 +266,13 @@ function makeEngineMove() {
   if (thinking || chess.isGameOver() || chess.turn === humanColor) return;
   thinking = true;
   render();
+  play(sounds.scanner);
   // Defer to next tick so the "thinking" UI paints before we block.
   setTimeout(() => {
     const depth = parseInt(document.getElementById('depth').value, 10);
     const move = LorFish.getBestMove(chess, depth);
+    sounds.scanner.pause();
+    sounds.scanner.currentTime = 0;
     if (move) {
       const san = chess.moveToSan(move);
       chess.makeMove(move);
