@@ -34,6 +34,36 @@ function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
 }
 
+// === Sound effects ===
+const sounds = {
+  move:      new Audio('assets/Move.mp3'),
+  capture:   new Audio('assets/Capture.mp3'),
+  check:     new Audio('assets/Check.mp3'),
+  checkmate: new Audio('assets/Checkmate.mp3'),
+  draw:      new Audio('assets/Draw.mp3'),
+  explosion: new Audio('assets/Explosion.mp3'),
+};
+Object.values(sounds).forEach(a => { a.preload = 'auto'; a.volume = 0.6; });
+
+function play(a) {
+  if (!a) return;
+  a.currentTime = 0;
+  // Browsers reject .play() before any user gesture — swallow that quietly.
+  a.play().catch(() => {});
+}
+
+// Pick a sound based on the position AFTER the most recent makeMove.
+function playMoveSound() {
+  const last = chess.history[chess.history.length - 1];
+  const captured = last ? last.captured : null;
+  if (chess.isCheckmate())            return play(sounds.checkmate);
+  if (chess.isGameOver())             return play(sounds.draw);
+  if (captured && captured.t === 'q') return play(sounds.explosion);
+  if (chess.inCheck())                return play(sounds.check);
+  if (captured)                       return play(sounds.capture);
+  play(sounds.move);
+}
+
 function render() {
   boardEl.innerHTML = '';
   const inCheckNow = chess.inCheck();
@@ -221,6 +251,7 @@ function doHumanMove(move) {
   chess.makeMove(move);
   lastMove = move;
   moveHistory.push(san);
+  playMoveSound();
   selected = null;
   legalFromSelected = [];
   render();
@@ -243,6 +274,7 @@ function makeEngineMove() {
       chess.makeMove(move);
       lastMove = move;
       moveHistory.push(san);
+      playMoveSound();
     }
     thinking = false;
     render();
@@ -273,6 +305,7 @@ function undo() {
   promotionPending = null;
   promoEl.classList.remove('show');
 
+  const before = chess.history.length;
   // After a normal turn it's the human to move; pop two plies (engine + human).
   if (chess.turn === humanColor && chess.history.length >= 2) {
     chess.undoMove();
@@ -282,6 +315,7 @@ function undo() {
     chess.undoMove();
     moveHistory.splice(-1);
   }
+  if (chess.history.length < before) play(sounds.move);
   lastMove = chess.history.length > 0
     ? chess.history[chess.history.length - 1].move
     : null;
