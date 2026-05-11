@@ -199,6 +199,7 @@ const LorFish = {
     this.nodes++;
     if (qdepth > this.maxQ) this.maxQ = qdepth;
 
+    if ((chess.positionCounts.get(chess.positionKey()) || 0) >= 2) return 0;
     const moves = chess.legalMoves();
     if (moves.length === 0) return chess.inCheck() ? -99999 : 0;
     if (chess.isInsufficientMaterial()) return 0;
@@ -220,6 +221,11 @@ const LorFish = {
 
   negamax(chess, depth, alpha, beta) {
     this.nodes++;
+    // Repetition draw: count >= 2 means the position appears in the actual
+    // game history plus the current search line ≥ 2 times — i.e. one more
+    // pass through it forces 3-fold. Treat as draw so a winning side avoids
+    // it and a losing side can seek it.
+    if ((chess.positionCounts.get(chess.positionKey()) || 0) >= 2) return 0;
     const moves = chess.legalMoves();
     if (moves.length === 0) return chess.inCheck() ? (-99999 - depth) : 0;
     if (chess.isInsufficientMaterial()) return 0;
