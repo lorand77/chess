@@ -83,6 +83,73 @@ const LorFish = {
     return phase;
   },
 
+  // Detect "win by mating a lone king" endgames: weaker side has only its
+  // king, stronger side has K + at least one major piece and no pawns.
+  // Returns { winner, loser } colors or null. Gates the lone-king eval term
+  // and the depth bump below — by construction, never fires in the middlegame.
+  isLoneKingMate(chess) {
+    let wPieces = 0, bPieces = 0;
+    let wMajor = 0, bMajor = 0;
+    let wPawns = 0, bPawns = 0;
+    for (let i = 0; i < 64; i++) {
+      const p = chess.squares[i];
+      if (!p) continue;
+      if (p.c === W) {
+        wPieces++;
+        if (p.t === 'r' || p.t === 'q') wMajor++;
+        else if (p.t === 'p') wPawns++;
+      } else {
+        bPieces++;
+        if (p.t === 'r' || p.t === 'q') bMajor++;
+        else if (p.t === 'p') bPawns++;
+      }
+    }
+    if (wPieces === 1 && bPieces > 1 && bMajor >= 1 && bPawns === 0) {
+      return { winner: B, loser: W };
+    }
+    if (bPieces === 1 && wPieces > 1 && wMajor >= 1 && wPawns === 0) {
+      return { winner: W, loser: B };
+    }
+    return null;
+  },
+
+  // White-positive eval contribution that herds the lone king to the edge/
+  // corner, brings the winning king close, and rewards the opposition. Caller
+  // adds this into `score` before the side-to-move flip in evaluate(). Sized
+  // to dominate rook-PST jitter (~30 cp swings) so the engine consistently
+  // makes progress instead of shuffling.
+  loneKingMateTerm(chess, lk) {
+    let wKsq = -1, bKsq = -1;
+    for (let i = 0; i < 64; i++) {
+      const p = chess.squares[i];
+      if (p && p.t === 'k') {
+        if (p.c === W) wKsq = i; else bKsq = i;
+      }
+    }
+    const winSq = lk.winner === W ? wKsq : bKsq;
+    const losSq = lk.loser  === W ? wKsq : bKsq;
+    const wf = winSq & 7, wr = winSq >> 3;
+    const lf = losSq & 7, lr = losSq >> 3;
+
+    // Edge push of loser king: 0 in central 4x4, up to 120 in a corner.
+    const edgeF = Math.max(3 - lf, lf - 4, 0);
+    const edgeR = Math.max(3 - lr, lr - 4, 0);
+    const edge = 20 * (edgeF + edgeR);
+
+    // Corner bonus — only the four corners mate with a lone rook.
+    const corner = (losSq === 0 || losSq === 7 || losSq === 56 || losSq === 63) ? 30 : 0;
+
+    // Strong-king proximity by Chebyshev distance (king-tempo metric).
+    const cheb = Math.max(Math.abs(wf - lf), Math.abs(wr - lr));
+    const prox = 16 * (7 - cheb);
+
+    // Opposition: kings on same file/rank with exactly one square between.
+    const opposition = (cheb === 2 && (wf === lf || wr === lr)) ? 24 : 0;
+
+    const total = edge + corner + prox + opposition;
+    return lk.winner === W ? total : -total;
+  },
+
   // Boost search depth as the position simplifies, so endgame mates fall
   // within the horizon without slowing middlegame play.
   adaptiveDepth(chess, baseDepth) {
@@ -112,14 +179,19 @@ const LorFish = {
   },
 
   evaluate(chess) {
+    const lk = this.isLoneKingMate(chess);
     let score = 0;
     for (let sq = 0; sq < 64; sq++) {
       const p = chess.squares[sq];
       if (!p) continue;
+      // Skip the king PST in lone-king-mate endgames — its middlegame bias
+      // (rewards corners, penalizes center) actively fights the mate drive.
+      if (lk && p.t === 'k') continue;
       const idx = p.c === W ? sq : (sq ^ 56);
       const v = this.pieceValues[p.t] + this.pst[p.t][idx];
       score += p.c === W ? v : -v;
     }
+    if (lk) score += this.loneKingMateTerm(chess, lk);
     return chess.turn === W ? score : -score;
   },
 
