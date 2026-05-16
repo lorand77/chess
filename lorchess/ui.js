@@ -24,6 +24,8 @@ const promoOpts     = document.getElementById('promoOptions');
 const colorSelectEl = document.getElementById('humanColor');
 const whiteLabelEl  = document.getElementById('whiteLabel');
 const blackLabelEl  = document.getElementById('blackLabel');
+const capturedTopEl    = document.getElementById('capturedTop');
+const capturedBottomEl = document.getElementById('capturedBottom');
 const loadFenBtn    = document.getElementById('loadFenBtn');
 const fenPanel      = document.getElementById('fenPanel');
 const fenText       = document.getElementById('fenText');
@@ -33,6 +35,68 @@ const fenError      = document.getElementById('fenError');
 
 function pieceImgSrc(piece) {
   return `assets/${piece.c}_${PIECE_NAMES[piece.t]}_1x_ns.png`;
+}
+
+const PIECE_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const CAPTURE_ORDER = ['p', 'n', 'b', 'r', 'q'];
+
+function renderCaptured() {
+  const byWhite = [];
+  const byBlack = [];
+  for (const h of chess.history) {
+    if (!h.captured) continue;
+    (h.captured.c === B ? byWhite : byBlack).push(h.captured);
+  }
+  const sortFn = (a, b) => CAPTURE_ORDER.indexOf(a.t) - CAPTURE_ORDER.indexOf(b.t);
+  byWhite.sort(sortFn);
+  byBlack.sort(sortFn);
+
+  let whiteMat = 0, blackMat = 0;
+  for (const p of chess.squares) {
+    if (!p) continue;
+    if (p.c === W) whiteMat += PIECE_VAL[p.t];
+    else           blackMat += PIECE_VAL[p.t];
+  }
+  const whiteAdv = whiteMat - blackMat;
+
+  const topColor    = humanColor === W ? B : W;
+  const bottomColor = humanColor;
+  const byTop    = topColor    === W ? byWhite : byBlack;
+  const byBottom = bottomColor === W ? byWhite : byBlack;
+  const topAdv    = topColor    === W ? whiteAdv : -whiteAdv;
+  const bottomAdv = bottomColor === W ? whiteAdv : -whiteAdv;
+
+  fillCaptured(capturedTopEl,    byTop,    topAdv);
+  fillCaptured(capturedBottomEl, byBottom, bottomAdv);
+}
+
+function fillCaptured(el, pieces, adv) {
+  el.innerHTML = '';
+  const groups = {};
+  for (const p of pieces) {
+    if (!groups[p.t]) groups[p.t] = [];
+    groups[p.t].push(p);
+  }
+  for (const t of CAPTURE_ORDER) {
+    if (!groups[t]) continue;
+    const group = document.createElement('span');
+    group.className = 'cap-group';
+    for (const p of groups[t]) {
+      const img = document.createElement('img');
+      img.src = pieceImgSrc(p);
+      img.className = 'cap-piece';
+      img.draggable = false;
+      img.alt = p.c + p.t;
+      group.appendChild(img);
+    }
+    el.appendChild(group);
+  }
+  if (adv > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'cap-adv';
+    badge.textContent = '+' + adv;
+    el.appendChild(badge);
+  }
 }
 
 // === Sound effects ===
@@ -218,6 +282,8 @@ function render() {
 
   historyEl.textContent = buildPgn();
   historyEl.scrollTop = historyEl.scrollHeight;
+
+  renderCaptured();
 }
 
 function buildPgn() {
