@@ -69,6 +69,56 @@ const LorFish = {
     ],
   },
 
+  // Endgame piece-square tables, blended with `pst` by gamePhase() in
+  // evaluate(). Only `k` and `p` are defined: in pawn endgames the
+  // middlegame king PST punishes centralization and the pawn PST under-
+  // rewards advanced pawns. Other pieces fall back to the middlegame PST.
+  pstEnd: {
+    p: [
+        0,   0,   0,   0,   0,   0,   0,   0,
+       10,  10,  10,  10,  10,  10,  10,  10,
+       12,  12,  12,  12,  12,  12,  12,  12,
+       20,  20,  20,  25,  25,  20,  20,  20,
+       30,  30,  35,  40,  40,  35,  30,  30,
+       50,  50,  50,  55,  55,  50,  50,  50,
+       80,  80,  80,  85,  85,  80,  80,  80,
+        0,   0,   0,   0,   0,   0,   0,   0,
+    ],
+    k: [
+      -50, -30, -30, -30, -30, -30, -30, -50,
+      -30, -10,   0,   0,   0,   0, -10, -30,
+      -30,   0,  20,  30,  30,  20,   0, -30,
+      -30,   0,  30,  40,  40,  30,   0, -30,
+      -30,   0,  30,  40,  40,  30,   0, -30,
+      -30,   0,  20,  30,  30,  20,   0, -30,
+      -30, -10,   0,   0,   0,   0, -10, -30,
+      -50, -30, -30, -30, -30, -30, -30, -50,
+    ],
+  },
+
+  // Passed-pawn bonus indexed by advancement from the owner's perspective.
+  // 0 = home rank, 6 = one square from promotion. Endgame-weighted in
+  // evaluate(): full value when phase==0, 25% when phase==24.
+  passedPawnBonus: [0, 0, 10, 20, 40, 70, 120, 0],
+
+  // True when the pawn at `sq` has no opposing pawn on its file or either
+  // adjacent file, on any rank between it and promotion.
+  isPassedPawn(chess, sq, color) {
+    const f = sq & 7;
+    const r = sq >> 3;
+    const step = color === W ? 1 : -1;
+    const last = color === W ? 7 : 0;
+    for (let nr = r + step; nr !== last + step; nr += step) {
+      for (let df = -1; df <= 1; df++) {
+        const nf = f + df;
+        if (nf < 0 || nf > 7) continue;
+        const p = chess.squares[nr * 8 + nf];
+        if (p && p.t === 'p' && p.c !== color) return false;
+      }
+    }
+    return true;
+  },
+
   // Sum of non-pawn piece weights across both sides.
   // 24 at the starting position; 0 in a pure pawn endgame.
   gamePhase(chess) {
@@ -180,6 +230,8 @@ const LorFish = {
 
   evaluate(chess) {
     const lk = this.isLoneKingMate(chess);
+    const phase = this.gamePhase(chess);   // 0..24
+    const eg = 24 - phase;
     let score = 0;
     for (let sq = 0; sq < 64; sq++) {
       const p = chess.squares[sq];
@@ -188,7 +240,17 @@ const LorFish = {
       // (rewards corners, penalizes center) actively fights the mate drive.
       if (lk && p.t === 'k') continue;
       const idx = p.c === W ? sq : (sq ^ 56);
-      const v = this.pieceValues[p.t] + this.pst[p.t][idx];
+      const mgPst = this.pst[p.t][idx];
+      const egTable = this.pstEnd[p.t];
+      const egPst = egTable ? egTable[idx] : mgPst;
+      const pstVal = ((mgPst * phase + egPst * eg) / 24) | 0;
+      let v = this.pieceValues[p.t] + pstVal;
+      if (p.t === 'p' && this.isPassedPawn(chess, sq, p.c)) {
+        const adv = p.c === W ? (sq >> 3) : 7 - (sq >> 3);
+        const base = this.passedPawnBonus[adv];
+        // Full bonus in pure endgame, 25% at the starting position.
+        v += ((base * eg + (base >> 2) * phase) / 24) | 0;
+      }
       score += p.c === W ? v : -v;
     }
     if (lk) score += this.loneKingMateTerm(chess, lk);
@@ -229,7 +291,12 @@ const LorFish = {
     const moves = chess.legalMoves();
     if (moves.length === 0) return chess.inCheck() ? (-99999 - depth) : 0;
     if (chess.isInsufficientMaterial()) return 0;
-    if (depth === 0) return this.quiescence(chess, alpha, beta, 0);
+    // Check extension: at the horizon, give the side in check one more ply
+    // so short forcing mates and quiet replies to checks fall in the window.
+    if (depth === 0) {
+      if (chess.inCheck()) depth = 1;
+      else return this.quiescence(chess, alpha, beta, 0);
+    }
 
     const ordered = this.orderMoves(chess, moves);
     let best = -Infinity;
